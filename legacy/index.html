@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Organizador · Tareas y Pomodoro</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ============ BARRA LATERAL ============ -->
+  <aside id="sidebar">
+    <div class="user-box">
+      <div class="avatar" id="avatar">A</div>
+      <div class="user-meta">
+        <div class="user-name" id="userName">Mi organizador</div>
+        <div class="user-mail" id="userMail">Tareas y Pomodoro</div>
+      </div>
+    </div>
+
+    <div class="search-box">
+      <span class="ico">🔍</span>
+      <input type="text" id="searchInput" placeholder="Buscar">
+    </div>
+
+    <nav class="nav-lists" id="navLists">
+      <button class="nav-item active" data-view="miDia"><span class="ico sun">☀</span><span class="nav-label">Mi día</span><span class="count" id="c-miDia"></span></button>
+      <button class="nav-item" data-view="importante"><span class="ico star">★</span><span class="nav-label">Importante</span><span class="count" id="c-importante"></span></button>
+      <button class="nav-item" data-view="planeado"><span class="ico plan">🗓</span><span class="nav-label">Planeado</span><span class="count" id="c-planeado"></span></button>
+      <button class="nav-item" data-view="completadas"><span class="ico done">✓</span><span class="nav-label">Completadas</span><span class="count" id="c-completadas"></span></button>
+      <button class="nav-item" data-view="asignadas"><span class="ico assign">👤</span><span class="nav-label">Asignado a mí</span><span class="count" id="c-asignadas"></span></button>
+      <button class="nav-item" data-view="tareas"><span class="ico home">🏠</span><span class="nav-label">Tareas</span><span class="count" id="c-tareas"></span></button>
+    </nav>
+
+    <div class="nav-divider"></div>
+
+    <nav class="nav-lists" id="navTools">
+      <button class="nav-item" data-view="calendario"><span class="ico cal">📅</span><span class="nav-label">Calendario</span></button>
+      <button class="nav-item" data-view="pomodoro"><span class="ico tom">🍅</span><span class="nav-label">Pomodoro</span></button>
+    </nav>
+
+    <div class="nav-divider"></div>
+    <div class="custom-lists-title">Mis listas</div>
+    <nav class="nav-lists" id="customLists"></nav>
+
+    <div class="sidebar-footer">
+      <button class="new-list-btn" id="newListBtn"><span class="ico">＋</span> Nueva lista</button>
+      <button class="settings-btn" id="openSettings" title="Configuración">⚙</button>
+    </div>
+  </aside>
+
+  <!-- ============ PANEL PRINCIPAL ============ -->
+  <main id="main">
+
+    <!-- ---- Vista de listas de tareas ---- -->
+    <section id="viewTasks" class="view active">
+      <header class="main-header">
+        <div>
+          <h1 id="viewTitle">Mi día</h1>
+          <p class="subtitle" id="viewSubtitle"></p>
+        </div>
+        <div class="header-actions">
+          <button class="icon-btn" id="sortBtn" title="Ordenar">⇅</button>
+          <button class="icon-btn" id="renameListBtn" title="Renombrar lista" hidden>✎</button>
+          <button class="icon-btn danger" id="deleteListBtn" title="Eliminar lista" hidden>🗑</button>
+        </div>
+      </header>
+
+      <div class="task-scroll">
+        <ul class="task-list" id="taskList"></ul>
+        <ul class="task-list muted" id="doneList"></ul>
+        <p class="empty-msg" id="emptyMsg" hidden>No hay tareas todavía. Agrega una abajo 👇</p>
+      </div>
+
+      <div class="add-task-bar" id="addTaskBar">
+        <span class="plus">＋</span>
+        <input type="text" id="newTaskInput" placeholder="Agregar una tarea (ej. Estudiar cálculo)">
+        <label class="field">Hora<input type="time" id="newTaskStart"></label>
+        <label class="field">Fin<input type="time" id="newTaskEnd"></label>
+        <label class="field">Fecha<input type="date" id="newTaskDate"></label>
+        <label class="field narrow">🍅<input type="number" id="newTaskPomos" min="1" max="20" value="1"></label>
+        <button class="primary" id="addTaskBtn">Agregar</button>
+      </div>
+      <p class="hint">Si escribes una hora, la actividad se registra automáticamente en el calendario.</p>
+    </section>
+
+    <!-- ---- Vista de calendario ---- -->
+    <section id="viewCalendar" class="view">
+      <header class="main-header">
+        <div>
+          <h1>Calendario</h1>
+          <p class="subtitle" id="calSubtitle"></p>
+        </div>
+        <div class="header-actions">
+          <div class="seg">
+            <button class="seg-btn active" data-calmode="dia">Día</button>
+            <button class="seg-btn" data-calmode="semana">Semana</button>
+          </div>
+          <button class="icon-btn" id="calPrev">‹</button>
+          <button class="icon-btn" id="calToday">Hoy</button>
+          <button class="icon-btn" id="calNext">›</button>
+        </div>
+      </header>
+      <div class="calendar-wrap" id="calendarWrap"></div>
+    </section>
+
+    <!-- ---- Vista pomodoro ---- -->
+    <section id="viewPomodoro" class="view">
+      <div class="pomo-page">
+        <div class="pomo-card" id="pomoCard">
+          <div class="pomo-tabs">
+            <button class="pomo-tab active" data-mode="pomodoro">Pomodoro</button>
+            <button class="pomo-tab" data-mode="short">Descanso corto</button>
+            <button class="pomo-tab" data-mode="long">Descanso largo</button>
+          </div>
+          <div class="pomo-time" id="pomoTime">25:00</div>
+          <button class="pomo-start" id="pomoStart">START</button>
+          <button class="pomo-skip" id="pomoSkip" hidden>⏭</button>
+        </div>
+        <div class="pomo-current">
+          <div class="pomo-round" id="pomoRound">#1</div>
+          <div class="pomo-task" id="pomoTaskName">Sin tarea seleccionada</div>
+        </div>
+
+        <div class="pomo-tasks-head">
+          <h2>Tareas</h2>
+          <button class="icon-btn" id="clearDoneBtn" title="Borrar tareas completadas">⋮</button>
+        </div>
+        <ul class="pomo-task-list" id="pomoTaskList"></ul>
+        <p class="pomo-summary" id="pomoSummary"></p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============ PANEL DE DETALLE ============ -->
+  <aside id="detail" class="hidden">
+    <div class="detail-head">
+      <strong>Detalle de la tarea</strong>
+      <button class="icon-btn" id="closeDetail">✕</button>
+    </div>
+    <div class="detail-body" id="detailBody"></div>
+  </aside>
+</div>
+
+<!-- ============ MODAL DE CONFIGURACIÓN (estilo Pomofocus) ============ -->
+<div class="modal-backdrop hidden" id="settingsModal">
+  <div class="modal">
+    <div class="modal-head">
+      <span>CONFIGURACIÓN</span>
+      <button class="icon-btn" id="closeSettings">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="set-group">
+        <div class="set-group-title">⏱ TEMPORIZADOR</div>
+        <div class="set-sub">Tiempo (minutos)</div>
+        <div class="time-grid">
+          <label>Pomodoro<input type="number" id="setPomodoro" min="1" max="180"></label>
+          <label>Descanso corto<input type="number" id="setShort" min="1" max="120"></label>
+          <label>Descanso largo<input type="number" id="setLong" min="1" max="180"></label>
+        </div>
+        <div class="set-row"><span>Inicio automático de descansos</span><label class="switch"><input type="checkbox" id="setAutoBreaks"><span class="slider"></span></label></div>
+        <div class="set-row"><span>Inicio automático de pomodoros</span><label class="switch"><input type="checkbox" id="setAutoPomos"><span class="slider"></span></label></div>
+        <div class="set-row"><span>Intervalo de descanso largo</span><input type="number" class="mini" id="setLongInterval" min="1" max="12"></div>
+      </div>
+
+      <div class="set-group">
+        <div class="set-group-title">✓ TAREAS</div>
+        <div class="set-row"><span>Marcar tareas automáticamente <i class="help" title="Marca la tarea como completada cuando alcanza sus pomodoros estimados">?</i></span><label class="switch"><input type="checkbox" id="setAutoCheck"><span class="slider"></span></label></div>
+        <div class="set-row"><span>Mover al final al completar <i class="help" title="Las tareas completadas se mueven al final de la lista">?</i></span><label class="switch"><input type="checkbox" id="setCheckBottom"><span class="slider"></span></label></div>
+      </div>
+
+      <div class="set-group">
+        <div class="set-group-title">🔊 SONIDO</div>
+        <div class="set-row"><span>Sonido de alarma</span>
+          <select id="setAlarmSound">
+            <option value="campana">Campana</option>
+            <option value="pitido">Pitido</option>
+            <option value="timbre">Timbre</option>
+            <option value="ninguno">Ninguno</option>
+          </select>
+        </div>
+        <div class="set-row slim"><input type="range" id="setAlarmVolume" min="0" max="100"><span class="range-val" id="alarmVolVal">73</span></div>
+        <div class="set-row slim right"><span>repetir</span><input type="number" class="mini" id="setAlarmRepeat" min="1" max="10"></div>
+        <div class="set-row"><span>Sonido de enfoque</span>
+          <select id="setFocusSound">
+            <option value="ninguno">Ninguno</option>
+            <option value="reloj">Reloj (tic-tac)</option>
+            <option value="ruido">Ruido blanco</option>
+          </select>
+        </div>
+        <div class="set-row slim"><input type="range" id="setFocusVolume" min="0" max="100"><span class="range-val" id="focusVolVal">50</span></div>
+      </div>
+
+      <div class="set-group">
+        <div class="set-group-title">🎨 TEMA</div>
+        <div class="set-row"><span>Temas de color</span>
+          <div class="theme-dots" id="themeDots">
+            <button class="dot" data-theme="magenta" style="background:#ba4e78"></button>
+            <button class="dot" data-theme="morado" style="background:#5b4b9c"></button>
+            <button class="dot" data-theme="azul" style="background:#2b7cb8"></button>
+            <button class="dot" data-theme="verde" style="background:#3a8a6b"></button>
+            <button class="dot" data-theme="rojo" style="background:#b8443c"></button>
+          </div>
+        </div>
+        <div class="set-row"><span>Formato de hora</span>
+          <select id="setHourFormat"><option value="24">24 horas</option><option value="12">12 horas</option></select>
+        </div>
+        <div class="set-row"><span>Modo oscuro al ejecutar</span><label class="switch"><input type="checkbox" id="setDarkRunning"><span class="slider"></span></label></div>
+      </div>
+
+      <div class="set-group">
+        <div class="set-group-title">🔔 NOTIFICACIÓN</div>
+        <div class="set-row"><span>Recordatorio</span>
+          <div class="inline">
+            <select id="setReminderType"><option value="ultimo">Último</option><option value="cada">Cada</option></select>
+            <input type="number" class="mini" id="setReminderMin" min="0" max="60"><span class="unit">min</span>
+          </div>
+        </div>
+        <div class="set-row"><span>Notificaciones del navegador</span><button class="ghost-btn" id="askNotif">Activar</button></div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="ghost-btn" id="resetSettings">Restablecer</button>
+        <button class="primary" id="saveSettings">Aceptar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
