@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../store/AppContext';
 import { TaskItem } from './TaskItem';
 import { fechaLarga, fmtHora, hoyISO } from '../utils/date';
+import type { Quadrant } from '../types';
 
 export function TaskList() {
   const {
@@ -22,6 +23,8 @@ export function TaskList() {
   const [fin, setFin] = useState('');
   const [fecha, setFecha] = useState<string>(() => hoyISO());
   const [pomos, setPomos] = useState('1');
+  const [quadrant, setQuadrant] = useState<Quadrant>('Q2');
+  const [areaId, setAreaId] = useState('');
 
   const esLista = vista.startsWith('lista:');
   const listaId = esLista ? vista.slice(6) : 'tareas';
@@ -49,6 +52,8 @@ export function TaskList() {
         inicio,
         fin,
         estPomos,
+        quadrant,
+        areaId: areaId || undefined,
       },
     });
 
@@ -160,6 +165,26 @@ export function TaskList() {
             onChange={(e) => setPomos(e.target.value)}
           />
         </label>
+        <label className="field">
+          Cuadrante
+          <select value={quadrant} onChange={(e) => setQuadrant(e.target.value as Quadrant)}>
+            <option value="Q1">Q1 · Hacer ya</option>
+            <option value="Q2">Q2 · Planificar</option>
+            <option value="Q3">Q3 · Delegar</option>
+            <option value="Q4">Q4 · Eliminar</option>
+          </select>
+        </label>
+        {state.areas.length > 0 && (
+          <label className="field">
+            Área
+            <select value={areaId} onChange={(e) => setAreaId(e.target.value)}>
+              <option value="">Sin área</option>
+              {state.areas.map((a) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+          </label>
+        )}
         <button type="button" className="primary" onClick={agregar}>
           Agregar
         </button>

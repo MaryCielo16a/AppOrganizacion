@@ -2,6 +2,22 @@
    Tipos del dominio
    ========================================================= */
 
+export type Quadrant = 'Q1' | 'Q2' | 'Q3' | 'Q4';
+
+/** Un área de vida (Platzi Clase 3). */
+export interface Area {
+  id: string;
+  name: string;
+  color: string;
+}
+
+/** Una meta dentro de un área de vida. */
+export interface Goal {
+  id: string;
+  areaId: string;
+  title: string;
+}
+
 /** Una sesión de pomodoro completada sobre una tarea. */
 export interface PomodoroSession {
   /** ISO 8601 del momento en que arrancó el bloque. */
@@ -32,6 +48,12 @@ export interface Task {
   estPomos: number;
   sesiones: PomodoroSession[];
   creada: string;
+  /** Cuadrante de Eisenhower (Q1-Q4). */
+  quadrant: Quadrant;
+  /** Área de vida asociada. */
+  areaId: string;
+  /** Meta asociada. */
+  goalId: string;
 }
 
 /** Una lista de tareas de la barra lateral. */
@@ -77,6 +99,8 @@ export interface PersistedState {
   ajustes: Settings;
   tareaActiva: string | null;
   ronda: number;
+  areas: Area[];
+  goals: Goal[];
 }
 
 export type PomodoroMode = 'pomodoro' | 'short' | 'long';
@@ -89,7 +113,9 @@ export type BuiltinView =
   | 'asignadas'
   | 'tareas'
   | 'calendario'
-  | 'pomodoro';
+  | 'pomodoro'
+  | 'eisenhower'
+  | 'areas';
 
 /** Vista activa: una de las integradas o `lista:<id>` para una lista propia. */
 export type ViewId = BuiltinView | `lista:${string}`;
@@ -107,4 +133,7 @@ export interface NewTaskInput {
   inicio?: string;
   fin?: string;
   estPomos?: number;
+  quadrant?: Quadrant;
+  areaId?: string;
+  goalId?: string;
 }

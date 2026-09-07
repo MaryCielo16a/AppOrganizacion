@@ -31,4 +31,6 @@ export const INITIAL_STATE: PersistedState = {
   ajustes: DEFAULT_SETTINGS,
   tareaActiva: null,
   ronda: 1,
+  areas: [],
+  goals: [],
 };

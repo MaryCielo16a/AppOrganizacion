@@ -28,6 +28,8 @@ export const TITULOS: Record<string, string> = {
   tareas: 'Tareas',
   calendario: 'Calendario',
   pomodoro: 'Pomodoro',
+  eisenhower: 'Matriz de Eisenhower',
+  areas: 'Áreas y Metas',
 };
 
 interface AppContextValue {

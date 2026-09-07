@@ -7,6 +7,8 @@ import { TaskList } from './components/TaskList';
 import { TaskDetail } from './components/TaskDetail';
 import { Calendar } from './components/Calendar';
 import { PomodoroTimer } from './components/PomodoroTimer';
+import { EisenhowerView } from './components/EisenhowerView';
+import { AreasView } from './components/AreasView';
 import { SettingsPanel } from './components/SettingsPanel';
 import { Toast } from './components/Toast';
 import { mmss } from './utils/date';
@@ -86,6 +88,10 @@ export function App() {
             <Calendar />
           ) : vista === 'pomodoro' ? (
             <PomodoroTimer />
+          ) : vista === 'eisenhower' ? (
+            <EisenhowerView />
+          ) : vista === 'areas' ? (
+            <AreasView />
           ) : (
             <TaskList />
           )}
