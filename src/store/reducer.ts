@@ -27,7 +27,8 @@ export type Action =
   | { type: 'UPDATE_SETTINGS'; patch: Partial<Settings> }
   | { type: 'RESET_SETTINGS' }
   | { type: 'NEXT_ROUND' }
-  | { type: 'SEED_EXAMPLES' };
+  | { type: 'SEED_EXAMPLES' }
+  | { type: 'LOAD_CLOUD'; state: PersistedState };
 
 /** Mueve una tarea completada al final si el ajuste está activo. */
 function reordenar(tareas: Task[], id: string, ajustes: Settings): Task[] {
@@ -129,6 +130,9 @@ export function reducer(state: PersistedState, action: Action): PersistedState {
 
     case 'NEXT_ROUND':
       return { ...state, ronda: state.ronda + 1 };
+
+    case 'LOAD_CLOUD':
+      return action.state;
 
     case 'SEED_EXAMPLES': {
       if (state.tareas.length > 0) return state;

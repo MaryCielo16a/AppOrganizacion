@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import { useApp } from './store/AppContext';
+import { useAuth } from './store/AuthContext';
+import { AuthScreen } from './components/AuthScreen';
 import { Sidebar } from './components/Sidebar';
 import { TaskList } from './components/TaskList';
 import { TaskDetail } from './components/TaskDetail';
@@ -10,6 +12,7 @@ import { Toast } from './components/Toast';
 import { mmss } from './utils/date';
 
 export function App() {
+  const { user, loading } = useAuth();
   const {
     state,
     vista,
@@ -54,6 +57,14 @@ export function App() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [cerrarDetalle, pomodoro, setAjustesAbiertos, setSidebarAbierto]);
+
+  if (loading) {
+    return <div className="auth-loading">Cargando...</div>;
+  }
+
+  if (!user) {
+    return <AuthScreen />;
+  }
 
   return (
     <>

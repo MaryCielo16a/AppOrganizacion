@@ -15,6 +15,8 @@ import { INITIAL_STATE, STORAGE_KEY } from './defaults';
 import { usePersistentReducer } from '../hooks/useLocalStorage';
 import { usePomodoro } from '../hooks/usePomodoro';
 import type { PomodoroApi } from '../hooks/usePomodoro';
+import { useFirestoreSync } from '../hooks/useFirestoreSync';
+import { useAuth } from './AuthContext';
 import { hoyISO } from '../utils/date';
 
 export const TITULOS: Record<string, string> = {
@@ -70,7 +72,10 @@ export function esEventoCalendario(t: Task): boolean {
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [state, dispatch] = usePersistentReducer(STORAGE_KEY, reducer, INITIAL_STATE, hydrate);
+
+  useFirestoreSync(user?.uid ?? null, state, dispatch);
 
   const [vista, setVista] = useState<ViewId>('miDia');
   const [busqueda, setBusqueda] = useState('');

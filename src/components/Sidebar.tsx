@@ -1,4 +1,5 @@
 import { useApp } from '../store/AppContext';
+import { useAuth } from '../store/AuthContext';
 import { hoyISO } from '../utils/date';
 import type { ViewId } from '../types';
 
@@ -25,6 +26,7 @@ const NAV_HERRAMIENTAS: NavDef[] = [
 
 export function Sidebar() {
   const { state, dispatch, vista, irA, busqueda, setBusqueda, setAjustesAbiertos, sidebarAbierto } = useApp();
+  const { user, logout } = useAuth();
   const hoy = hoyISO();
 
   const contarPendientes = (view: ViewId): number => {
@@ -60,10 +62,10 @@ export function Sidebar() {
   return (
     <aside id="sidebar" className={sidebarAbierto ? 'open' : ''}>
       <div className="user-box">
-        <div className="avatar">A</div>
+        <div className="avatar">{user?.displayName?.[0]?.toUpperCase() ?? 'U'}</div>
         <div className="user-meta">
-          <div className="user-name">Mi organizador</div>
-          <div className="user-mail">Tareas y Pomodoro</div>
+          <div className="user-name">{user?.displayName ?? 'Usuario'}</div>
+          <div className="user-mail">{user?.email ?? ''}</div>
         </div>
       </div>
 
@@ -154,6 +156,15 @@ export function Sidebar() {
           onClick={() => setAjustesAbiertos(true)}
         >
           ⚙
+        </button>
+        <button
+          type="button"
+          className="settings-btn"
+          title="Cerrar sesión"
+          aria-label="Cerrar sesión"
+          onClick={logout}
+        >
+          ⏻
         </button>
       </div>
     </aside>
