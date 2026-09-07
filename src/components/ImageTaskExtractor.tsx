@@ -42,25 +42,28 @@ Reglas:
 - Extrae TODAS las tareas/actividades visibles.
 - El título debe ser descriptivo y en el idioma original de la imagen.`;
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: prompt },
-            { inlineData: { mimeType, data: base64 } },
-          ],
-        }],
-      }),
-    },
-  );
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
+  const body = JSON.stringify({
+    contents: [{
+      parts: [
+        { text: prompt },
+        { inlineData: { mimeType, data: base64 } },
+      ],
+    }],
+  });
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(res.status === 400 ? 'API key inválida o imagen no soportada' : `Error ${res.status}: ${err}`);
+  let res: Response | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+    if (res.status !== 503) break;
+    await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+  }
+
+  if (!res || !res.ok) {
+    const err = res ? await res.text() : '';
+    if (res?.status === 503) throw new Error('Gemini está saturado. Inténtalo de nuevo en unos segundos.');
+    if (res?.status === 400) throw new Error('API key inválida o imagen no soportada');
+    throw new Error(`Error ${res?.status}: ${err}`);
   }
 
   const json = await res.json();
