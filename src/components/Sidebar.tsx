@@ -20,8 +20,10 @@ const NAV_PRINCIPAL: NavDef[] = [
 ];
 
 const NAV_HERRAMIENTAS: NavDef[] = [
-  { view: 'calendario', icono: '📅', clase: 'cal', etiqueta: 'Calendario' },
   { view: 'pomodoro', icono: '🍅', clase: 'tom', etiqueta: 'Pomodoro' },
+  { view: 'eisenhower', icono: '⊞', clase: 'eisen', etiqueta: 'Eisenhower' },
+  { view: 'areas', icono: '🎯', clase: 'areas', etiqueta: 'Áreas y Metas' },
+  { view: 'calendario', icono: '📅', clase: 'cal', etiqueta: 'Calendario' },
 ];
 
 export function Sidebar() {
@@ -115,6 +117,30 @@ export function Sidebar() {
           </button>
         ))}
       </nav>
+
+      {state.areas.length > 0 && (
+        <>
+          <div className="nav-divider" />
+          <div className="custom-lists-title">Mis áreas</div>
+          <nav className="nav-lists">
+            {state.areas.map((a) => {
+              const num = state.tareas.filter((t) => t.areaId === a.id && !t.hecha).length;
+              return (
+                <button
+                  key={a.id}
+                  type="button"
+                  className="nav-item"
+                  onClick={() => irA('areas')}
+                >
+                  <span className="ico area-ico" style={{ color: `var(--area-${a.color}, var(--accent))` }}>●</span>
+                  <span className="nav-label">{a.name}</span>
+                  <span className="count">{num || ''}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </>
+      )}
 
       <div className="nav-divider" />
       <div className="custom-lists-title">Mis listas</div>

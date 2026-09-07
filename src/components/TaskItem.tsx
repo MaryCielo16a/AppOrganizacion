@@ -12,6 +12,7 @@ export function TaskItem({ tarea }: Props) {
 
   const completados = tarea.sesiones.length;
 
+  const area = state.areas.find((a) => a.id === tarea.areaId);
   const meta: string[] = [nombreLista(tarea.listaId)];
   if (tarea.fecha) {
     const d = isoADate(tarea.fecha);
@@ -24,6 +25,8 @@ export function TaskItem({ tarea }: Props) {
     meta.push(`📅 ${etiqueta}`);
   }
   if (tarea.miDia) meta.push('☀ Mi día');
+  if (tarea.quadrant) meta.push(tarea.quadrant);
+  if (area) meta.push(`● ${area.name}`);
 
   const enfocar = () => {
     dispatch({ type: 'SET_ACTIVE_TASK', id: tarea.id });

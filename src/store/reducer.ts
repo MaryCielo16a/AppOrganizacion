@@ -1,7 +1,10 @@
 import type {
+  Area,
+  Goal,
   NewTaskInput,
   PersistedState,
   PomodoroSession,
+  Quadrant,
   Settings,
   Task,
   TaskListDef,
@@ -27,6 +30,10 @@ export type Action =
   | { type: 'UPDATE_SETTINGS'; patch: Partial<Settings> }
   | { type: 'RESET_SETTINGS' }
   | { type: 'NEXT_ROUND' }
+  | { type: 'ADD_AREA'; name: string; color: string }
+  | { type: 'DELETE_AREA'; id: string }
+  | { type: 'ADD_GOAL'; areaId: string; title: string }
+  | { type: 'DELETE_GOAL'; id: string }
   | { type: 'SEED_EXAMPLES' }
   | { type: 'LOAD_CLOUD'; state: PersistedState };
 
@@ -53,6 +60,9 @@ function crearTarea(input: NewTaskInput): Task {
     estPomos: Math.max(1, input.estPomos ?? 1),
     sesiones: [],
     creada: new Date().toISOString(),
+    quadrant: input.quadrant ?? 'Q2',
+    areaId: input.areaId ?? '',
+    goalId: input.goalId ?? '',
   };
 }
 
@@ -131,6 +141,35 @@ export function reducer(state: PersistedState, action: Action): PersistedState {
     case 'NEXT_ROUND':
       return { ...state, ronda: state.ronda + 1 };
 
+    case 'ADD_AREA': {
+      const area: Area = { id: uid(), name: action.name, color: action.color };
+      return { ...state, areas: [...state.areas, area] };
+    }
+
+    case 'DELETE_AREA':
+      return {
+        ...state,
+        areas: state.areas.filter((a) => a.id !== action.id),
+        goals: state.goals.filter((g) => g.areaId !== action.id),
+        tareas: state.tareas.map((t) =>
+          t.areaId === action.id ? { ...t, areaId: '', goalId: '' } : t,
+        ),
+      };
+
+    case 'ADD_GOAL': {
+      const goal: Goal = { id: uid(), areaId: action.areaId, title: action.title };
+      return { ...state, goals: [...state.goals, goal] };
+    }
+
+    case 'DELETE_GOAL':
+      return {
+        ...state,
+        goals: state.goals.filter((g) => g.id !== action.id),
+        tareas: state.tareas.map((t) =>
+          t.goalId === action.id ? { ...t, goalId: '' } : t,
+        ),
+      };
+
     case 'LOAD_CLOUD':
       return action.state;
 
@@ -173,16 +212,22 @@ export function hydrate(guardado: PersistedState): PersistedState {
   const tareas = Array.isArray(guardado.tareas) ? guardado.tareas : [];
   const listas =
     Array.isArray(guardado.listas) && guardado.listas.length > 0 ? guardado.listas : DEFAULT_LISTS;
+  const validQ = new Set<Quadrant>(['Q1', 'Q2', 'Q3', 'Q4']);
   return {
     tareas: tareas.map((t) => ({
       ...crearTarea({ titulo: t?.titulo ?? '(sin título)' }),
       ...t,
       sesiones: Array.isArray(t?.sesiones) ? t.sesiones : [],
       estPomos: Math.max(1, Number(t?.estPomos) || 1),
+      quadrant: validQ.has(t?.quadrant) ? t.quadrant : 'Q2',
+      areaId: t?.areaId ?? '',
+      goalId: t?.goalId ?? '',
     })),
     listas,
     ajustes: normalizarAjustes({ ...DEFAULT_SETTINGS, ...(guardado.ajustes ?? {}) }),
     tareaActiva: guardado.tareaActiva ?? null,
     ronda: Number(guardado.ronda) > 0 ? Number(guardado.ronda) : 1,
+    areas: Array.isArray(guardado.areas) ? guardado.areas : [],
+    goals: Array.isArray(guardado.goals) ? guardado.goals : [],
   };
 }
