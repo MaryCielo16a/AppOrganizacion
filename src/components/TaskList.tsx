@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../store/AppContext';
 import { TaskItem } from './TaskItem';
+import { ImageTaskExtractor } from './ImageTaskExtractor';
 import { fechaLarga, fmtHora, hoyISO } from '../utils/date';
 import type { Quadrant } from '../types';
 
@@ -25,6 +26,7 @@ export function TaskList() {
   const [pomos, setPomos] = useState('1');
   const [quadrant, setQuadrant] = useState<Quadrant>('Q2');
   const [areaId, setAreaId] = useState('');
+  const [imgExtractor, setImgExtractor] = useState(false);
 
   const esLista = vista.startsWith('lista:');
   const listaId = esLista ? vista.slice(6) : 'tareas';
@@ -90,6 +92,14 @@ export function TaskList() {
           <p className="subtitle">{vista === 'miDia' ? fechaLarga(new Date()) : ''}</p>
         </div>
         <div className="header-actions">
+          <button
+            type="button"
+            className="icon-btn"
+            title="Extraer tareas de imagen"
+            onClick={() => setImgExtractor(true)}
+          >
+            📷
+          </button>
           <button
             type="button"
             className="icon-btn"
@@ -193,6 +203,8 @@ export function TaskList() {
       <p className="hint">
         Si escribes una hora, la actividad se registra automáticamente en el calendario.
       </p>
+
+      {imgExtractor && <ImageTaskExtractor onClose={() => setImgExtractor(false)} />}
     </section>
   );
 }
