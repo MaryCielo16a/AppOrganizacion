@@ -187,26 +187,29 @@ export function ImageTaskExtractor({ onClose }: Props) {
         </div>
 
         <div className="modal-body">
-          {/* API Key */}
-          <div className="d-field img-ext-key">
-            <label>API Key de Gemini</label>
-            <div className="img-ext-key-row">
-              <input
-                type="password"
-                placeholder="Pega tu API key de Google AI Studio"
-                value={apiKey}
-                onChange={(e) => guardarKey(e.target.value)}
-              />
-              <a
-                href="https://aistudio.google.com/apikey"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="img-ext-help"
-              >
-                Obtener key
-              </a>
+          {/* API Key: solo visible si no hay una guardada */}
+          {!apiKey && (
+            <div className="d-field img-ext-key">
+              <label>API Key de Gemini</label>
+              <div className="img-ext-key-row">
+                <input
+                  type="password"
+                  placeholder="Pega tu API key de Google AI Studio"
+                  value={apiKey}
+                  onChange={(e) => guardarKey(e.target.value)}
+                  autoFocus
+                />
+                <a
+                  href="https://aistudio.google.com/apikey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="img-ext-help"
+                >
+                  Obtener key
+                </a>
+              </div>
             </div>
-          </div>
+          )}
 
           {error && <p className="img-ext-error">{error}</p>}
 
