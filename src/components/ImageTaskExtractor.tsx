@@ -94,11 +94,13 @@ export function ImageTaskExtractor({ onClose }: Props) {
   const [apiKey, setApiKey] = useState(() => {
     try { return localStorage.getItem(GEMINI_KEY_LS) ?? ''; } catch { return ''; }
   });
-  const [step, setStep] = useState<'upload' | 'loading' | 'review'>('upload');
+  const [step, setStep] = useState<'upload' | 'loading' | 'review' | 'needkey'>('upload');
   const [tasks, setTasks] = useState<ExtractedTask[]>([]);
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
 
   const guardarKey = (key: string) => {
     setApiKey(key);
@@ -107,7 +109,11 @@ export function ImageTaskExtractor({ onClose }: Props) {
 
   const procesarImagen = useCallback(async (file: File) => {
     if (!apiKey.trim()) {
-      setError('Configura tu API key de Gemini primero');
+      setPendingFile(file);
+      const reader = new FileReader();
+      reader.onload = () => setPreview(reader.result as string);
+      reader.readAsDataURL(file);
+      setStep('needkey');
       return;
     }
 
@@ -137,6 +143,12 @@ export function ImageTaskExtractor({ onClose }: Props) {
     };
     reader.readAsDataURL(file);
   }, [apiKey]);
+
+  const procesarPendiente = useCallback(() => {
+    if (!apiKey.trim() || !pendingFile) return;
+    setPendingFile(null);
+    procesarImagen(pendingFile);
+  }, [apiKey, pendingFile, procesarImagen]);
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -190,56 +202,80 @@ export function ImageTaskExtractor({ onClose }: Props) {
         </div>
 
         <div className="modal-body">
-          {/* API Key: solo visible si no hay una guardada */}
-          {!apiKey && (
-            <div className="d-field img-ext-key">
-              <label>API Key de Gemini</label>
-              <div className="img-ext-key-row">
-                <input
-                  type="password"
-                  placeholder="Pega tu API key de Google AI Studio"
-                  value={apiKey}
-                  onChange={(e) => guardarKey(e.target.value)}
-                  autoFocus
-                />
-                <a
-                  href="https://aistudio.google.com/apikey"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="img-ext-help"
-                >
-                  Obtener key
-                </a>
-              </div>
-            </div>
-          )}
-
           {error && <p className="img-ext-error">{error}</p>}
 
           {step === 'upload' && (
-            <div
-              className="img-ext-drop"
-              onDrop={onDrop}
-              onDragOver={(e) => e.preventDefault()}
-              onClick={() => fileRef.current?.click()}
-            >
-              {preview ? (
-                <img src={preview} alt="Preview" className="img-ext-preview" />
-              ) : (
-                <>
-                  <span className="img-ext-drop-icon">📷</span>
-                  <p>Arrastra una imagen aquí o haz clic para seleccionar</p>
-                  <p className="img-ext-hint">Sube una foto de tu horario, agenda o lista de tareas</p>
-                </>
-              )}
+            <>
+              <div className="img-ext-actions">
+                <button type="button" className="img-ext-camera-btn" onClick={() => cameraRef.current?.click()}>
+                  📸 Tomar foto
+                </button>
+                <button type="button" className="img-ext-gallery-btn" onClick={() => fileRef.current?.click()}>
+                  🖼 Galería
+                </button>
+              </div>
+              <div
+                className="img-ext-drop"
+                onDrop={onDrop}
+                onDragOver={(e) => e.preventDefault()}
+                onClick={() => fileRef.current?.click()}
+              >
+                {preview ? (
+                  <img src={preview} alt="Preview" className="img-ext-preview" />
+                ) : (
+                  <>
+                    <span className="img-ext-drop-icon">📷</span>
+                    <p>O arrastra una imagen aquí</p>
+                    <p className="img-ext-hint">Foto de tu horario, agenda o lista de tareas</p>
+                  </>
+                )}
+              </div>
               <input
-                ref={fileRef}
+                ref={cameraRef}
                 type="file"
                 accept="image/*"
                 capture="environment"
                 onChange={onFileChange}
                 hidden
               />
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                onChange={onFileChange}
+                hidden
+              />
+            </>
+          )}
+
+          {step === 'needkey' && (
+            <div className="img-ext-needkey">
+              {preview && <img src={preview} alt="Preview" className="img-ext-thumb" />}
+              <p className="img-ext-needkey-msg">Para extraer tareas de la foto necesitas una API key gratuita de Google AI.</p>
+              <div className="d-field img-ext-key">
+                <label>API Key de Gemini</label>
+                <div className="img-ext-key-row">
+                  <input
+                    type="password"
+                    placeholder="Pega tu API key de Google AI Studio"
+                    value={apiKey}
+                    onChange={(e) => guardarKey(e.target.value)}
+                    autoFocus
+                  />
+                  <a
+                    href="https://aistudio.google.com/apikey"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="img-ext-help"
+                  >
+                    Obtener key
+                  </a>
+                </div>
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="ghost-btn" onClick={() => { setStep('upload'); setPendingFile(null); }}>Volver</button>
+                <button type="button" className="primary" onClick={procesarPendiente} disabled={!apiKey.trim()}>Analizar foto</button>
+              </div>
             </div>
           )}
 
