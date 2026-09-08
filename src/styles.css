@@ -817,8 +817,10 @@ body.light .eq-task{background:#f7f9fa;border:1px solid var(--line)}
 .suggestions-list{display:flex;flex-direction:column;gap:8px}
 .suggestion-card{
   background:rgba(0,0,0,.22);border-radius:8px;padding:10px 12px;
-  display:flex;flex-direction:column;gap:6px;
+  display:flex;flex-direction:column;gap:6px;cursor:pointer;
+  transition:background .2s;
 }
+.suggestion-card:hover{background:rgba(0,0,0,.32)}
 .suggestion-info{display:flex;flex-direction:column;gap:2px}
 .suggestion-name{font-size:13px;font-weight:600;color:var(--text)}
 .suggestion-time{font-size:11px;color:var(--accent-soft)}

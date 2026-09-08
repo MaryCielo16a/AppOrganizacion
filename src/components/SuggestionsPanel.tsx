@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useApp } from '../store/AppContext';
 
 export function SuggestionsPanel() {
-  const { state, dispatch, showToast, vista } = useApp();
+  const { state, dispatch, showToast, vista, abrirDetalle } = useApp();
 
   const sugerencias = useMemo(() => {
     return state.tareas
@@ -20,7 +20,8 @@ export function SuggestionsPanel() {
 
   const agregar = (id: string) => {
     dispatch({ type: 'UPDATE_TASK', id, patch: { miDia: true } });
-    showToast('Añadida a Mi Día');
+    abrirDetalle(id);
+    showToast('Añadida a Mi Día — edita los detalles');
   };
 
   return (
@@ -29,7 +30,7 @@ export function SuggestionsPanel() {
       <p className="suggestions-hint">Arrastra o añade tareas a tu lista de hoy:</p>
       <div className="suggestions-list">
         {sugerencias.map((t) => (
-          <div key={t.id} className="suggestion-card">
+          <div key={t.id} className="suggestion-card" role="button" tabIndex={0} onClick={() => abrirDetalle(t.id)} onKeyDown={(e) => { if (e.key === 'Enter') abrirDetalle(t.id); }}>
             <div className="suggestion-info">
               <span className="suggestion-name">{t.titulo}</span>
               {t.inicio && t.fin && (
@@ -40,7 +41,7 @@ export function SuggestionsPanel() {
             <button
               type="button"
               className="suggestion-add"
-              onClick={() => agregar(t.id)}
+              onClick={(e) => { e.stopPropagation(); agregar(t.id); }}
             >
               + Añadir a Mi Día
             </button>
