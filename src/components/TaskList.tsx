@@ -138,7 +138,7 @@ export function TaskList() {
           </ul>
         )}
         {tareasVisibles.length === 0 && (
-          <p className="empty-msg">No hay tareas todavía. Agrega una abajo 👇</p>
+          <p className="empty-msg">No hay tareas todavía. Agrega una abajo o sube una foto de tu horario 📷</p>
         )}
       </div>
 
@@ -197,6 +197,9 @@ export function TaskList() {
         )}
         <button type="button" className="primary" onClick={agregar}>
           Agregar
+        </button>
+        <button type="button" className="img-btn" onClick={() => setImgExtractor(true)} title="Extraer tareas desde una foto">
+          📷 Desde foto
         </button>
       </div>
 

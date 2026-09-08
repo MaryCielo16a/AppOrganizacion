@@ -98,14 +98,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const pomodoro = usePomodoro(state, dispatch, showToast);
 
-  // Datos de ejemplo la primera vez que se abre la app.
-  const sembrado = useRef(false);
-  useEffect(() => {
-    if (sembrado.current) return;
-    sembrado.current = true;
-    dispatch({ type: 'SEED_EXAMPLES' });
-  }, [dispatch]);
-
   const irA = useCallback((v: ViewId) => {
     setVista(v);
     setSidebarAbierto(false);
