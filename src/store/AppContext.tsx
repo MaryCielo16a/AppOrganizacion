@@ -17,7 +17,7 @@ import { usePomodoro } from '../hooks/usePomodoro';
 import type { PomodoroApi } from '../hooks/usePomodoro';
 import { useFirestoreSync } from '../hooks/useFirestoreSync';
 import { useAuth } from './AuthContext';
-import { hoyISO } from '../utils/date';
+
 
 export const TITULOS: Record<string, string> = {
   miDia: 'Mi día',
@@ -131,8 +131,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       );
     }
 
-    const hoy = hoyISO();
-    if (vista === 'miDia') lista = lista.filter((t) => t.miDia || t.fecha === hoy);
+    if (vista === 'miDia') lista = lista.filter((t) => t.miDia);
     else if (vista === 'importante') lista = lista.filter((t) => t.importante);
     else if (vista === 'completadas') lista = lista.filter((t) => t.hecha);
     else if (vista === 'asignadas') lista = lista.filter((t) => t.asignada);
