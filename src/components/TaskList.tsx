@@ -27,6 +27,7 @@ export function TaskList() {
   const [quadrant, setQuadrant] = useState<Quadrant>('Q2');
   const [areaId, setAreaId] = useState('');
   const [imgExtractor, setImgExtractor] = useState(false);
+  const [completadasAbiertas, setCompletadasAbiertas] = useState(false);
 
   const esLista = vista.startsWith('lista:');
   const listaId = esLista ? vista.slice(6) : 'tareas';
@@ -131,11 +132,24 @@ export function TaskList() {
           ))}
         </ul>
         {completadas.length > 0 && (
-          <ul className="task-list muted">
-            {completadas.map((t) => (
-              <TaskItem key={t.id} tarea={t} />
-            ))}
-          </ul>
+          <div className="completed-section">
+            <button
+              type="button"
+              className="completed-toggle"
+              onClick={() => setCompletadasAbiertas((v) => !v)}
+            >
+              <span className="completed-arrow">{completadasAbiertas ? '▾' : '›'}</span>
+              <span>Completado</span>
+              <span className="completed-count">{completadas.length}</span>
+            </button>
+            {completadasAbiertas && (
+              <ul className="task-list muted">
+                {completadas.map((t) => (
+                  <TaskItem key={t.id} tarea={t} />
+                ))}
+              </ul>
+            )}
+          </div>
         )}
         {tareasVisibles.length === 0 && (
           <p className="empty-msg">No hay tareas todavía. Agrega una abajo o sube una foto de tu horario 📷</p>
