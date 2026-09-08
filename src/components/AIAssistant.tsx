@@ -1,9 +1,8 @@
 import { useCallback, useRef, useState } from 'react';
 import { useApp } from '../store/AppContext';
 import { hoyISO } from '../utils/date';
+import { getGeminiKey } from '../utils/gemini';
 import type { Quadrant } from '../types';
-
-const GEMINI_KEY_LS = 'organizador.geminiKey';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -63,19 +62,11 @@ async function chatWithGemini(apiKey: string, messages: Message[], systemPrompt:
 export function AIAssistant() {
   const { state, dispatch, showToast } = useApp();
 
-  const [apiKey, setApiKey] = useState(() => {
-    try { return localStorage.getItem(GEMINI_KEY_LS) ?? ''; } catch { return ''; }
-  });
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  const guardarKey = (key: string) => {
-    setApiKey(key);
-    try { localStorage.setItem(GEMINI_KEY_LS, key); } catch { /* */ }
-  };
 
   const tasksSummary = state.tareas
     .filter((t) => !t.hecha)
@@ -114,7 +105,8 @@ export function AIAssistant() {
 
   const enviar = async () => {
     const msg = input.trim();
-    if (!msg || !apiKey.trim()) return;
+    const key = getGeminiKey();
+    if (!msg || !key) { setError('API key de Gemini no configurada'); return; }
 
     setError('');
     const newMessages: Message[] = [...messages, { role: 'user', text: msg }];
@@ -125,7 +117,7 @@ export function AIAssistant() {
     setTimeout(() => scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight), 50);
 
     try {
-      const respuesta = await chatWithGemini(apiKey.trim(), newMessages, buildSystemPrompt(tasksSummary));
+      const respuesta = await chatWithGemini(key.trim(), newMessages, buildSystemPrompt(tasksSummary));
       const cleanResp = respuesta.replace(/\{"accion"\s*:\s*"crear"\s*,\s*"tareas"\s*:\s*\[[\s\S]*?\]\s*\}/, '').trim();
       procesarRespuesta(respuesta);
       setMessages([...newMessages, { role: 'assistant', text: cleanResp || respuesta }]);
@@ -155,25 +147,9 @@ export function AIAssistant() {
       </header>
 
       <div className="ai-container">
-        {!apiKey && (
-          <div className="ai-key-setup">
-            <p>Configura tu API key de Gemini para usar el asistente.</p>
-            <div className="ai-key-row">
-              <input
-                type="password"
-                placeholder="Pega tu API key de Google AI Studio"
-                value={apiKey}
-                onChange={(e) => guardarKey(e.target.value)}
-              />
-              <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">
-                Obtener key
-              </a>
-            </div>
-          </div>
-        )}
 
         <div className="ai-messages" ref={scrollRef}>
-          {messages.length === 0 && apiKey && (
+          {messages.length === 0 && (
             <div className="ai-welcome">
               <div className="ai-welcome-icon">🤖</div>
               <h3>¡Hola! Soy tu asistente de productividad</h3>
@@ -213,17 +189,17 @@ export function AIAssistant() {
         <div className="ai-input-bar">
           <input
             type="text"
-            placeholder={apiKey ? 'Escribe tu mensaje...' : 'Configura tu API key primero'}
+            placeholder="Escribe tu mensaje..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(); } }}
-            disabled={!apiKey || loading}
+            disabled={loading}
           />
           <button
             type="button"
             className="primary ai-send"
             onClick={enviar}
-            disabled={!apiKey || loading || !input.trim()}
+            disabled={loading || !input.trim()}
           >
             {loading ? '...' : '➤'}
           </button>

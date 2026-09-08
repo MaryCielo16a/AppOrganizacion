@@ -1,9 +1,8 @@
 import { useCallback, useRef, useState } from 'react';
 import { useApp } from '../store/AppContext';
 import { hoyISO } from '../utils/date';
+import { getGeminiKey } from '../utils/gemini';
 import type { Quadrant } from '../types';
-
-const GEMINI_KEY_LS = 'organizador.geminiKey';
 
 interface ExtractedTask {
   titulo: string;
@@ -91,29 +90,17 @@ interface Props {
 export function ImageTaskExtractor({ onClose }: Props) {
   const { dispatch, showToast } = useApp();
 
-  const [apiKey, setApiKey] = useState(() => {
-    try { return localStorage.getItem(GEMINI_KEY_LS) ?? ''; } catch { return ''; }
-  });
-  const [step, setStep] = useState<'upload' | 'loading' | 'review' | 'needkey'>('upload');
+  const [step, setStep] = useState<'upload' | 'loading' | 'review'>('upload');
   const [tasks, setTasks] = useState<ExtractedTask[]>([]);
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
 
-  const guardarKey = (key: string) => {
-    setApiKey(key);
-    try { localStorage.setItem(GEMINI_KEY_LS, key); } catch { /* */ }
-  };
-
   const procesarImagen = useCallback(async (file: File) => {
-    if (!apiKey.trim()) {
-      setPendingFile(file);
-      const reader = new FileReader();
-      reader.onload = () => setPreview(reader.result as string);
-      reader.readAsDataURL(file);
-      setStep('needkey');
+    const key = getGeminiKey();
+    if (!key) {
+      setError('Servicio de IA no disponible en este momento');
       return;
     }
 
@@ -128,7 +115,7 @@ export function ImageTaskExtractor({ onClose }: Props) {
       const mimeType = file.type || 'image/jpeg';
 
       try {
-        const extracted = await extraerConGemini(apiKey.trim(), base64, mimeType);
+        const extracted = await extraerConGemini(key, base64, mimeType);
         if (extracted.length === 0) {
           setError('No se encontraron tareas en la imagen');
           setStep('upload');
@@ -142,13 +129,7 @@ export function ImageTaskExtractor({ onClose }: Props) {
       }
     };
     reader.readAsDataURL(file);
-  }, [apiKey]);
-
-  const procesarPendiente = useCallback(() => {
-    if (!apiKey.trim() || !pendingFile) return;
-    setPendingFile(null);
-    procesarImagen(pendingFile);
-  }, [apiKey, pendingFile, procesarImagen]);
+  }, []);
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -246,37 +227,6 @@ export function ImageTaskExtractor({ onClose }: Props) {
                 hidden
               />
             </>
-          )}
-
-          {step === 'needkey' && (
-            <div className="img-ext-needkey">
-              {preview && <img src={preview} alt="Preview" className="img-ext-thumb" />}
-              <p className="img-ext-needkey-msg">Para extraer tareas de la foto necesitas una API key gratuita de Google AI.</p>
-              <div className="d-field img-ext-key">
-                <label>API Key de Gemini</label>
-                <div className="img-ext-key-row">
-                  <input
-                    type="password"
-                    placeholder="Pega tu API key de Google AI Studio"
-                    value={apiKey}
-                    onChange={(e) => guardarKey(e.target.value)}
-                    autoFocus
-                  />
-                  <a
-                    href="https://aistudio.google.com/apikey"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="img-ext-help"
-                  >
-                    Obtener key
-                  </a>
-                </div>
-              </div>
-              <div className="modal-actions">
-                <button type="button" className="ghost-btn" onClick={() => { setStep('upload'); setPendingFile(null); }}>Volver</button>
-                <button type="button" className="primary" onClick={procesarPendiente} disabled={!apiKey.trim()}>Analizar foto</button>
-              </div>
-            </div>
           )}
 
           {step === 'loading' && (
