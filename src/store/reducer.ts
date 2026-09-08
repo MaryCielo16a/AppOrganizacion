@@ -11,7 +11,7 @@ import type {
   Task,
   TaskListDef,
 } from '../types';
-import { DEFAULT_LISTS, DEFAULT_SETTINGS, INITIAL_STATE } from './defaults';
+import { DEFAULT_AREAS, DEFAULT_LISTS, DEFAULT_SETTINGS, INITIAL_STATE } from './defaults';
 import { hoyISO } from '../utils/date';
 
 export function uid(): string {
@@ -244,7 +244,7 @@ export function hydrate(guardado: PersistedState): PersistedState {
     ajustes: normalizarAjustes({ ...DEFAULT_SETTINGS, ...(guardado.ajustes ?? {}) }),
     tareaActiva: guardado.tareaActiva ?? null,
     ronda: Number(guardado.ronda) > 0 ? Number(guardado.ronda) : 1,
-    areas: Array.isArray(guardado.areas) ? guardado.areas : [],
+    areas: Array.isArray(guardado.areas) && guardado.areas.length > 0 ? guardado.areas : DEFAULT_AREAS,
     goals: Array.isArray(guardado.goals)
       ? guardado.goals.map((g) => ({
           ...g,

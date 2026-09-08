@@ -1,4 +1,4 @@
-import type { PersistedState, Settings, TaskListDef } from '../types';
+import type { Area, PersistedState, Settings, TaskListDef } from '../types';
 
 export const STORAGE_KEY = 'organizador.v2';
 
@@ -25,12 +25,19 @@ export const DEFAULT_SETTINGS: Settings = {
 
 export const DEFAULT_LISTS: TaskListDef[] = [{ id: 'tareas', nombre: 'Tareas', fija: true }];
 
+export const DEFAULT_AREAS: Area[] = [
+  { id: 'area-laboral', name: 'Laboral', color: 'blue' },
+  { id: 'area-estudio', name: 'Estudio / Tareas', color: 'purple' },
+  { id: 'area-familiar', name: 'Familiar', color: 'green' },
+  { id: 'area-personal', name: 'Personal', color: 'orange' },
+];
+
 export const INITIAL_STATE: PersistedState = {
   tareas: [],
   listas: DEFAULT_LISTS,
   ajustes: DEFAULT_SETTINGS,
   tareaActiva: null,
   ronda: 1,
-  areas: [],
+  areas: DEFAULT_AREAS,
   goals: [],
 };
