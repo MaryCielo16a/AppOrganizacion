@@ -37,6 +37,7 @@ export type Action =
   | { type: 'ADD_GOAL'; areaId: string; title: string; horizon?: GoalHorizon; focus?: GoalFocus }
   | { type: 'UPDATE_GOAL'; id: string; patch: Partial<Goal> }
   | { type: 'DELETE_GOAL'; id: string }
+  | { type: 'REORDER_TASK'; dragId: string; refId: string; position: 'before' | 'after' }
   | { type: 'SEED_EXAMPLES' }
   | { type: 'LOAD_CLOUD'; state: PersistedState };
 
@@ -186,6 +187,20 @@ export function reducer(state: PersistedState, action: Action): PersistedState {
           t.goalId === action.id ? { ...t, goalId: '' } : t,
         ),
       };
+
+    case 'REORDER_TASK': {
+      const { dragId, refId, position } = action;
+      if (dragId === refId) return state;
+      const tareas = [...state.tareas];
+      const dragIdx = tareas.findIndex((t) => t.id === dragId);
+      if (dragIdx === -1) return state;
+      const [dragged] = tareas.splice(dragIdx, 1);
+      let refIdx = tareas.findIndex((t) => t.id === refId);
+      if (refIdx === -1) return state;
+      if (position === 'after') refIdx++;
+      tareas.splice(refIdx, 0, dragged);
+      return { ...state, tareas };
+    }
 
     case 'LOAD_CLOUD':
       return action.state;

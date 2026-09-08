@@ -4,9 +4,13 @@ import { DIAS_C, fmtHora, hoyISO, isoADate } from '../utils/date';
 
 interface Props {
   tarea: Task;
+  onDragStart?: (id: string) => void;
+  onDragOver?: (e: React.DragEvent, id: string) => void;
+  onDrop?: (id: string) => void;
+  isDragOver?: 'above' | 'below' | null;
 }
 
-export function TaskItem({ tarea }: Props) {
+export function TaskItem({ tarea, onDragStart, onDragOver, onDrop, isDragOver }: Props) {
   const { state, dispatch, abrirDetalle, irA, showToast, nombreLista } = useApp();
   const { hourFormat } = state.ajustes;
 
@@ -40,11 +44,31 @@ export function TaskItem({ tarea }: Props) {
         'task-item',
         tarea.hecha ? 'done' : '',
         state.tareaActiva === tarea.id ? 'selected' : '',
+        isDragOver === 'above' ? 'drag-over-above' : '',
+        isDragOver === 'below' ? 'drag-over-below' : '',
       ]
         .filter(Boolean)
         .join(' ')}
       data-id={tarea.id}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', tarea.id);
+        onDragStart?.(tarea.id);
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        onDragOver?.(e, tarea.id);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        onDrop?.(tarea.id);
+      }}
+      onDragEnd={() => onDragStart?.('')}
     >
+      <span className="drag-handle" title="Arrastrar para reordenar">⠿</span>
+
       <button
         type="button"
         className="check"
@@ -68,7 +92,7 @@ export function TaskItem({ tarea }: Props) {
         }}
       >
         <div className="task-title">{tarea.titulo}</div>
-        <div className="task-meta">{meta.join('  ·  ')}</div>
+        <div className="task-meta">{meta.join('  ·  ')}</div>
       </div>
 
       <span className="pomo-count" title="Pomodoros completados / estimados">

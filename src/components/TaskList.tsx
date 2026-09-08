@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useApp } from '../store/AppContext';
 import { TaskItem } from './TaskItem';
 import { ImageTaskExtractor } from './ImageTaskExtractor';
@@ -28,6 +28,27 @@ export function TaskList() {
   const [areaId, setAreaId] = useState('');
   const [imgExtractor, setImgExtractor] = useState(false);
   const [completadasAbiertas, setCompletadasAbiertas] = useState(false);
+
+  const dragId = useRef<string>('');
+  const [dragOverId, setDragOverId] = useState<string>('');
+  const [dragPos, setDragPos] = useState<'above' | 'below' | null>(null);
+
+  const handleDragStart = useCallback((id: string) => { dragId.current = id; if (!id) { setDragOverId(''); setDragPos(null); } }, []);
+  const handleDragOver = useCallback((e: React.DragEvent, id: string) => {
+    if (!dragId.current || dragId.current === id) { setDragOverId(''); setDragPos(null); return; }
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const pos = e.clientY < rect.top + rect.height / 2 ? 'above' : 'below';
+    setDragOverId(id);
+    setDragPos(pos);
+  }, []);
+  const handleDrop = useCallback((refId: string) => {
+    if (dragId.current && dragId.current !== refId && dragPos) {
+      dispatch({ type: 'REORDER_TASK', dragId: dragId.current, refId, position: dragPos === 'above' ? 'before' : 'after' });
+    }
+    dragId.current = '';
+    setDragOverId('');
+    setDragPos(null);
+  }, [dispatch, dragPos]);
 
   const esLista = vista.startsWith('lista:');
   const listaId = esLista ? vista.slice(6) : 'tareas';
@@ -126,9 +147,16 @@ export function TaskList() {
       </header>
 
       <div className="task-scroll">
-        <ul className="task-list">
+        <ul className="task-list" onDragOver={(e) => e.preventDefault()}>
           {pendientes.map((t) => (
-            <TaskItem key={t.id} tarea={t} />
+            <TaskItem
+              key={t.id}
+              tarea={t}
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              isDragOver={dragOverId === t.id ? dragPos : null}
+            />
           ))}
         </ul>
         {completadas.length > 0 && (
