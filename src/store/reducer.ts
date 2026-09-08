@@ -1,6 +1,8 @@
 import type {
   Area,
   Goal,
+  GoalFocus,
+  GoalHorizon,
   NewTaskInput,
   PersistedState,
   PomodoroSession,
@@ -32,7 +34,8 @@ export type Action =
   | { type: 'NEXT_ROUND' }
   | { type: 'ADD_AREA'; name: string; color: string }
   | { type: 'DELETE_AREA'; id: string }
-  | { type: 'ADD_GOAL'; areaId: string; title: string }
+  | { type: 'ADD_GOAL'; areaId: string; title: string; horizon?: GoalHorizon; focus?: GoalFocus }
+  | { type: 'UPDATE_GOAL'; id: string; patch: Partial<Goal> }
   | { type: 'DELETE_GOAL'; id: string }
   | { type: 'SEED_EXAMPLES' }
   | { type: 'LOAD_CLOUD'; state: PersistedState };
@@ -157,9 +160,23 @@ export function reducer(state: PersistedState, action: Action): PersistedState {
       };
 
     case 'ADD_GOAL': {
-      const goal: Goal = { id: uid(), areaId: action.areaId, title: action.title };
+      const goal: Goal = {
+        id: uid(),
+        areaId: action.areaId,
+        title: action.title,
+        horizon: action.horizon ?? 'anual',
+        focus: action.focus ?? 'activo',
+      };
       return { ...state, goals: [...state.goals, goal] };
     }
+
+    case 'UPDATE_GOAL':
+      return {
+        ...state,
+        goals: state.goals.map((g) =>
+          g.id === action.id ? { ...g, ...action.patch } : g,
+        ),
+      };
 
     case 'DELETE_GOAL':
       return {
@@ -228,6 +245,12 @@ export function hydrate(guardado: PersistedState): PersistedState {
     tareaActiva: guardado.tareaActiva ?? null,
     ronda: Number(guardado.ronda) > 0 ? Number(guardado.ronda) : 1,
     areas: Array.isArray(guardado.areas) ? guardado.areas : [],
-    goals: Array.isArray(guardado.goals) ? guardado.goals : [],
+    goals: Array.isArray(guardado.goals)
+      ? guardado.goals.map((g) => ({
+          ...g,
+          horizon: g.horizon ?? 'anual' as const,
+          focus: g.focus ?? 'activo' as const,
+        }))
+      : [],
   };
 }

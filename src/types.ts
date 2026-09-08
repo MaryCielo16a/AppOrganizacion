@@ -11,11 +11,16 @@ export interface Area {
   color: string;
 }
 
+export type GoalHorizon = 'anual' | 'mensual';
+export type GoalFocus = 'activo' | 'pausado' | 'completado';
+
 /** Una meta dentro de un área de vida. */
 export interface Goal {
   id: string;
   areaId: string;
   title: string;
+  horizon: GoalHorizon;
+  focus: GoalFocus;
 }
 
 /** Una sesión de pomodoro completada sobre una tarea. */
