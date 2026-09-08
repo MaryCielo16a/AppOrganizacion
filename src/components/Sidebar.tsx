@@ -26,6 +26,11 @@ const NAV_HERRAMIENTAS: NavDef[] = [
   { view: 'calendario', icono: '📅', clase: 'cal', etiqueta: 'Calendario' },
 ];
 
+const NAV_METODO: NavDef[] = [
+  { view: 'rutina', icono: '📋', clase: 'rutina', etiqueta: 'Rutina Semanal & Diaria' },
+  { view: 'asistente', icono: '🤖', clase: 'ia', etiqueta: 'Asistente IA Gemini' },
+];
+
 export function Sidebar() {
   const { state, dispatch, vista, irA, busqueda, setBusqueda, setAjustesAbiertos, sidebarAbierto } = useApp();
   const { user, logout } = useAuth();
@@ -114,6 +119,24 @@ export function Sidebar() {
           >
             <span className={`ico ${n.clase}`}>{n.icono}</span>
             <span className="nav-label">{n.etiqueta}</span>
+          </button>
+        ))}
+      </nav>
+
+      <div className="nav-divider" />
+
+      <nav className="nav-lists">
+        {NAV_METODO.map((n) => (
+          <button
+            key={n.view}
+            type="button"
+            className={`nav-item${vista === n.view ? ' active' : ''}`}
+            onClick={() => irA(n.view)}
+          >
+            <span className={`ico ${n.clase}`}>{n.icono}</span>
+            <span className="nav-label">{n.etiqueta}</span>
+            {n.view === 'rutina' && <span className="nav-badge guide">Guía</span>}
+            {n.view === 'asistente' && <span className="nav-badge ia">IA</span>}
           </button>
         ))}
       </nav>

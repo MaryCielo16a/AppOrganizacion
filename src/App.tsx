@@ -9,6 +9,9 @@ import { Calendar } from './components/Calendar';
 import { PomodoroTimer } from './components/PomodoroTimer';
 import { EisenhowerView } from './components/EisenhowerView';
 import { AreasView } from './components/AreasView';
+import { RoutineView } from './components/RoutineView';
+import { AIAssistant } from './components/AIAssistant';
+import { SuggestionsPanel } from './components/SuggestionsPanel';
 import { SettingsPanel } from './components/SettingsPanel';
 import { Toast } from './components/Toast';
 import { OnboardingGuide } from './components/OnboardingGuide';
@@ -93,10 +96,15 @@ export function App() {
             <EisenhowerView />
           ) : vista === 'areas' ? (
             <AreasView />
+          ) : vista === 'rutina' ? (
+            <RoutineView />
+          ) : vista === 'asistente' ? (
+            <AIAssistant />
           ) : (
             <TaskList />
           )}
         </main>
+        <SuggestionsPanel />
         {detalleId && <TaskDetail />}
       </div>
       {ajustesAbiertos && <SettingsPanel />}

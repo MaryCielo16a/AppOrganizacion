@@ -115,7 +115,9 @@ export type BuiltinView =
   | 'calendario'
   | 'pomodoro'
   | 'eisenhower'
-  | 'areas';
+  | 'areas'
+  | 'rutina'
+  | 'asistente';
 
 /** Vista activa: una de las integradas o `lista:<id>` para una lista propia. */
 export type ViewId = BuiltinView | `lista:${string}`;
