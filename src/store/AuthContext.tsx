@@ -14,6 +14,8 @@ interface AuthContextValue {
   user: User | null;
   loading: boolean;
   error: string;
+  justRegistered: boolean;
+  clearJustRegistered: () => void;
   clearError: () => void;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
@@ -41,10 +43,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [justRegistered, setJustRegistered] = useState(false);
 
   useEffect(() => onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); }), []);
 
   const clearError = () => setError('');
+  const clearJustRegistered = () => setJustRegistered(false);
 
   const login = async (email: string, password: string) => {
     setError('');
@@ -62,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(cred.user, { displayName: name });
       setUser({ ...cred.user });
+      setJustRegistered(true);
     } catch (e) {
       setError(firebaseError(e));
       throw e;
@@ -73,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, clearError, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, error, justRegistered, clearJustRegistered, clearError, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -11,10 +11,11 @@ import { EisenhowerView } from './components/EisenhowerView';
 import { AreasView } from './components/AreasView';
 import { SettingsPanel } from './components/SettingsPanel';
 import { Toast } from './components/Toast';
+import { OnboardingGuide } from './components/OnboardingGuide';
 import { mmss } from './utils/date';
 
 export function App() {
-  const { user, loading } = useAuth();
+  const { user, loading, justRegistered, clearJustRegistered } = useAuth();
   const {
     state,
     vista,
@@ -99,6 +100,12 @@ export function App() {
         {detalleId && <TaskDetail />}
       </div>
       {ajustesAbiertos && <SettingsPanel />}
+      {justRegistered && (
+        <OnboardingGuide
+          userName={user.displayName?.split(' ')[0] ?? 'usuario'}
+          onComplete={clearJustRegistered}
+        />
+      )}
       <Toast />
     </>
   );
