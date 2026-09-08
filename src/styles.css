@@ -200,6 +200,43 @@ body.light .cal-slot,body.light .cal-hour{border-color:var(--line)}
 .cal-event small{display:block;opacity:.85;font-size:10px}
 .cal-legend{font-size:12px;color:var(--text-dim);padding:10px 0 0}
 
+/* --- Calendar suggestions --- */
+.cal-suggestions{
+  margin:0 32px 12px;background:rgba(0,0,0,.18);border-radius:8px;
+  border:1px solid var(--line);overflow:hidden;
+}
+body.light .cal-suggestions{background:#f6f4f8}
+.cal-sug-toggle{
+  display:flex;align-items:center;justify-content:space-between;width:100%;
+  padding:10px 14px;background:none;border:none;color:var(--text);
+  font-size:13px;font-weight:600;cursor:pointer;
+}
+.cal-sug-toggle:hover{background:rgba(255,255,255,.05)}
+body.light .cal-sug-toggle:hover{background:rgba(0,0,0,.04)}
+.cal-sug-arrow{font-size:11px;opacity:.6}
+.cal-sug-list{
+  display:flex;flex-wrap:wrap;gap:8px;padding:0 14px 12px;
+}
+.cal-sug-card{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,.07);border-radius:6px;padding:6px 10px;
+  min-width:180px;flex:1 1 calc(50% - 4px);max-width:100%;
+}
+body.light .cal-sug-card{background:rgba(0,0,0,.05)}
+.cal-sug-info{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0}
+.cal-sug-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-sug-meta{font-size:10px;color:var(--text-dim)}
+.cal-sug-add{
+  flex-shrink:0;font-size:10px;font-weight:700;padding:4px 8px;border-radius:4px;
+  background:var(--accent);color:#fff;border:none;cursor:pointer;white-space:nowrap;
+  transition:background .2s;
+}
+.cal-sug-add:hover{background:var(--accent-dark)}
+@media(max-width:700px){
+  .cal-suggestions{margin:0 16px 10px}
+  .cal-sug-card{flex:1 1 100%}
+}
+
 /* ===== POMODORO ===== */
 .pomo-page{flex:1;overflow-y:auto;padding:24px 0 40px;display:flex;flex-direction:column;align-items:center}
 .pomo-card{

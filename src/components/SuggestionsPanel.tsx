@@ -1,27 +1,19 @@
 import { useMemo } from 'react';
 import { useApp } from '../store/AppContext';
-import { hoyISO } from '../utils/date';
 
 export function SuggestionsPanel() {
   const { state, dispatch, showToast, vista } = useApp();
-  const hoy = hoyISO();
 
   const sugerencias = useMemo(() => {
     return state.tareas
-      .filter((t) => {
-        if (t.hecha) return false;
-        if (t.miDia || t.fecha === hoy) return false;
-        if (t.fecha && t.fecha >= hoy) return true;
-        if (t.importante || t.quadrant === 'Q1' || t.quadrant === 'Q2') return true;
-        return false;
-      })
+      .filter((t) => !t.hecha && !t.miDia)
       .sort((a, b) => {
+        if (a.importante !== b.importante) return a.importante ? -1 : 1;
         if (a.quadrant < b.quadrant) return -1;
         if (a.quadrant > b.quadrant) return 1;
         return (a.fecha + a.inicio).localeCompare(b.fecha + b.inicio);
-      })
-      .slice(0, 8);
-  }, [state.tareas, hoy]);
+      });
+  }, [state.tareas]);
 
   if (vista !== 'miDia' && vista !== 'rutina') return null;
   if (sugerencias.length === 0) return null;

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useApp } from '../store/AppContext';
 import type { HourFormat, Task } from '../types';
 import {
@@ -16,7 +16,7 @@ import {
 const HORAS = Array.from({ length: 24 }, (_, h) => h);
 
 export function Calendar() {
-  const { state, calModo, setCalModo, calFecha, setCalFecha, eventosDelDia, abrirDetalle } = useApp();
+  const { state, dispatch, showToast, calModo, setCalModo, calFecha, setCalFecha, eventosDelDia, abrirDetalle } = useApp();
   const { hourFormat } = state.ajustes;
 
   const dias = useMemo(() => {
@@ -33,6 +33,36 @@ export function Calendar() {
   const hoy = hoyISO();
   const horaActual = new Date().getHours();
   const total = dias.reduce((a, d) => a + eventosDelDia(toISODate(d)).length, 0);
+
+  const calISO = calModo === 'dia' ? toISODate(calFecha) : '';
+  const fechaCorta = calFecha.toLocaleDateString('es', { day: 'numeric', month: 'short' });
+
+  const sinHorario = useMemo(
+    () =>
+      state.tareas
+        .filter((t) => !t.hecha && !t.inicio)
+        .sort((a, b) => {
+          if (a.importante !== b.importante) return a.importante ? -1 : 1;
+          if (a.quadrant < b.quadrant) return -1;
+          if (a.quadrant > b.quadrant) return 1;
+          return 0;
+        })
+        .slice(0, 12),
+    [state.tareas],
+  );
+
+  const [panelAbierto, setPanelAbierto] = useState(true);
+
+  const agregarAlCal = (id: string) => {
+    const target = calModo === 'dia' ? calISO : hoy;
+    const now = new Date();
+    let nextHour = now.getHours() + 1;
+    if (nextHour > 22) nextHour = 9;
+    const inicio = `${String(nextHour).padStart(2, '0')}:00`;
+    const fin = `${String(Math.min(nextHour + 1, 23)).padStart(2, '0')}:00`;
+    dispatch({ type: 'UPDATE_TASK', id, patch: { fecha: target, inicio, fin } });
+    showToast('Tarea agregada al calendario');
+  };
 
   const mover = (signo: number) => {
     setCalFecha(sumarDias(calFecha, signo * (calModo === 'dia' ? 1 : 7)));
@@ -73,6 +103,41 @@ export function Calendar() {
           </button>
         </div>
       </header>
+
+      {sinHorario.length > 0 && (
+        <div className="cal-suggestions">
+          <button
+            type="button"
+            className="cal-sug-toggle"
+            onClick={() => setPanelAbierto((v) => !v)}
+          >
+            <span>📋 Tareas sin horario ({sinHorario.length})</span>
+            <span className="cal-sug-arrow">{panelAbierto ? '▾' : '▸'}</span>
+          </button>
+          {panelAbierto && (
+            <div className="cal-sug-list">
+              {sinHorario.map((t) => (
+                <div key={t.id} className="cal-sug-card">
+                  <div className="cal-sug-info">
+                    <span className="cal-sug-name">{t.titulo}</span>
+                    <span className="cal-sug-meta">
+                      {t.estPomos} 🍅{t.quadrant !== 'Q2' ? ` · ${t.quadrant}` : ''}
+                      {t.importante ? ' · ⭐' : ''}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="cal-sug-add"
+                    onClick={() => agregarAlCal(t.id)}
+                  >
+                    + {calModo === 'dia' ? fechaCorta : 'Hoy'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="calendar-wrap">
         <div
