@@ -76,11 +76,13 @@ export function Calendar() {
     return `${lunes.getDate()} de ${MESES[lunes.getMonth()].slice(0, 3)} – ${dom.getDate()} de ${MESES[dom.getMonth()].slice(0, 3)} de ${dom.getFullYear()}`;
   }, [calFecha, calModo, dias]);
 
-  const sinHorario = useMemo(
+  const tareasPendientes = useMemo(
     () =>
       state.tareas
-        .filter((t) => !t.hecha && !t.inicio)
+        .filter((t) => !t.hecha)
         .sort((a, b) => {
+          if (a.inicio && !b.inicio) return 1;
+          if (!a.inicio && b.inicio) return -1;
           if (a.importante !== b.importante) return a.importante ? -1 : 1;
           if (a.quadrant < b.quadrant) return -1;
           if (a.quadrant > b.quadrant) return 1;
@@ -343,11 +345,11 @@ export function Calendar() {
           </div>
 
           {/* ===== SIDEBAR: Draggable suggestions ===== */}
-          {sinHorario.length > 0 && (
+          {tareasPendientes.length > 0 && (
             <div className="gcal-sidebar">
-              <div className="gcal-sidebar-title">Tareas sin horario</div>
+              <div className="gcal-sidebar-title">Tareas pendientes</div>
               <div className="gcal-sidebar-list">
-                {sinHorario.map((t) => (
+                {tareasPendientes.map((t) => (
                   <div
                     key={t.id}
                     className="gcal-sidebar-item"
@@ -359,6 +361,7 @@ export function Calendar() {
                     <div className="gcal-sidebar-info">
                       <span className="gcal-sidebar-name">{t.titulo}</span>
                       <span className="gcal-sidebar-meta">
+                        {t.inicio ? `${fmtHora(t.inicio, hourFormat)}${t.fin ? ' – ' + fmtHora(t.fin, hourFormat) : ''} · ` : ''}
                         {t.estPomos} 🍅{t.quadrant !== 'Q2' ? ` · ${t.quadrant}` : ''}
                         {t.importante ? ' · ★' : ''}
                       </span>
