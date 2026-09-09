@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import type { Dispatch } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -12,13 +12,14 @@ export function useFirestoreSync(
   uid: string | null,
   state: PersistedState,
   dispatch: Dispatch<Action>,
-) {
+): boolean {
   const guardadoRef = useRef(false);
   const skipNextSave = useRef(false);
+  const [cloudLoaded, setCloudLoaded] = useState(false);
 
   // Cargar datos del usuario al iniciar sesión
   useEffect(() => {
-    if (!uid) return;
+    if (!uid) { setCloudLoaded(true); return; }
     let cancelado = false;
 
     (async () => {
@@ -34,6 +35,7 @@ export function useFirestoreSync(
         console.warn('[firestore] error al cargar datos:', e);
       } finally {
         guardadoRef.current = true;
+        if (!cancelado) setCloudLoaded(true);
       }
     })();
 
@@ -62,4 +64,6 @@ export function useFirestoreSync(
     const id = window.setTimeout(() => guardar(state), DEBOUNCE);
     return () => window.clearTimeout(id);
   }, [uid, state, guardar]);
+
+  return cloudLoaded;
 }

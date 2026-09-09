@@ -80,9 +80,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [state, dispatch] = usePersistentReducer(STORAGE_KEY, reducer, INITIAL_STATE, hydrate);
 
-  useFirestoreSync(user?.uid ?? null, state, dispatch);
+  const cloudLoaded = useFirestoreSync(user?.uid ?? null, state, dispatch);
 
   useEffect(() => {
+    if (!cloudLoaded) return;
     const MI_DIA_KEY = 'organizador.lastMiDiaReset';
     const hoy = hoyISO();
     try {
@@ -92,7 +93,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(MI_DIA_KEY, hoy);
       }
     } catch { /* localStorage not available */ }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cloudLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [vista, setVista] = useState<ViewId>('miDia');
   const [busqueda, setBusqueda] = useState('');
