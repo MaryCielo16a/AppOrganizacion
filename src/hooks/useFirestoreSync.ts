@@ -5,8 +5,23 @@ import { db } from '../firebase';
 import type { PersistedState } from '../types';
 import type { Action } from '../store/reducer';
 import { hydrate } from '../store/reducer';
+import { hoyISO } from '../utils/date';
 
 const DEBOUNCE = 800;
+const MI_DIA_KEY = 'organizador.lastMiDiaReset.v3';
+
+function resetMiDiaSiNuevoDia(datos: PersistedState): { state: PersistedState; changed: boolean } {
+  const hoy = hoyISO();
+  try {
+    const last = localStorage.getItem(MI_DIA_KEY);
+    if (last === hoy) return { state: datos, changed: false };
+    const tareas = datos.tareas.map((t) => (t.miDia && !t.hecha ? { ...t, miDia: false } : t));
+    localStorage.setItem(MI_DIA_KEY, hoy);
+    return { state: { ...datos, tareas }, changed: true };
+  } catch {
+    return { state: datos, changed: false };
+  }
+}
 
 export function useFirestoreSync(
   uid: string | null,
@@ -19,7 +34,13 @@ export function useFirestoreSync(
 
   // Cargar datos del usuario al iniciar sesión
   useEffect(() => {
-    if (!uid) { setCloudLoaded(true); return; }
+    if (!uid) {
+      // Sin usuario: resetear Mi día sobre datos locales
+      const { state: reset, changed } = resetMiDiaSiNuevoDia(state);
+      if (changed) dispatch({ type: 'LOAD_CLOUD', state: reset });
+      setCloudLoaded(true);
+      return;
+    }
     let cancelado = false;
 
     (async () => {
@@ -27,8 +48,11 @@ export function useFirestoreSync(
         const snap = await getDoc(doc(db, 'usuarios', uid));
         if (cancelado) return;
         if (snap.exists()) {
-          const datos = hydrate(snap.data() as PersistedState);
-          skipNextSave.current = true;
+          let datos = hydrate(snap.data() as PersistedState);
+          const { state: reset, changed } = resetMiDiaSiNuevoDia(datos);
+          datos = reset;
+          // Si hubo reset, permitir que se guarde de vuelta a Firestore
+          if (!changed) skipNextSave.current = true;
           dispatch({ type: 'LOAD_CLOUD', state: datos });
         }
       } catch (e) {
@@ -40,7 +64,7 @@ export function useFirestoreSync(
     })();
 
     return () => { cancelado = true; };
-  }, [uid, dispatch]);
+  }, [uid, dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Guardar datos cuando cambian
   const guardar = useCallback(

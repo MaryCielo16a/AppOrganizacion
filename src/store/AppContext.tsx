@@ -17,8 +17,6 @@ import { usePomodoro } from '../hooks/usePomodoro';
 import type { PomodoroApi } from '../hooks/usePomodoro';
 import { useFirestoreSync } from '../hooks/useFirestoreSync';
 import { useAuth } from './AuthContext';
-import { hoyISO } from '../utils/date';
-
 
 export const TITULOS: Record<string, string> = {
   miDia: 'Mi día',
@@ -80,20 +78,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [state, dispatch] = usePersistentReducer(STORAGE_KEY, reducer, INITIAL_STATE, hydrate);
 
-  const cloudLoaded = useFirestoreSync(user?.uid ?? null, state, dispatch);
-
-  useEffect(() => {
-    if (!cloudLoaded) return;
-    const MI_DIA_KEY = 'organizador.lastMiDiaReset.v2';
-    const hoy = hoyISO();
-    try {
-      const last = localStorage.getItem(MI_DIA_KEY);
-      if (last !== hoy) {
-        dispatch({ type: 'RESET_MI_DIA' });
-        localStorage.setItem(MI_DIA_KEY, hoy);
-      }
-    } catch { /* localStorage not available */ }
-  }, [cloudLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+  useFirestoreSync(user?.uid ?? null, state, dispatch);
 
   const [vista, setVista] = useState<ViewId>('miDia');
   const [busqueda, setBusqueda] = useState('');
