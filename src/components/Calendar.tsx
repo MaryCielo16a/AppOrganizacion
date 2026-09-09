@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../store/AppContext';
 import type { HourFormat, Task } from '../types';
 import {
@@ -34,6 +34,69 @@ function getMesGrid(year: number, month: number): Date[][] {
   return weeks;
 }
 
+function timeToMin(t: string): number {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + (m || 0);
+}
+
+interface LayoutInfo {
+  col: number;
+  totalCols: number;
+}
+
+function calcEventLayout(events: Task[]): Map<string, LayoutInfo> {
+  const result = new Map<string, LayoutInfo>();
+  const sorted = events
+    .filter((e) => e.inicio)
+    .sort((a, b) => a.inicio.localeCompare(b.inicio));
+  if (sorted.length === 0) return result;
+
+  const groups: Task[][] = [];
+  let group: Task[] = [];
+  let groupEnd = 0;
+
+  for (const ev of sorted) {
+    const start = timeToMin(ev.inicio);
+    const end = ev.fin ? timeToMin(ev.fin) : start + 60;
+    if (group.length === 0 || start < groupEnd) {
+      group.push(ev);
+      groupEnd = Math.max(groupEnd, end);
+    } else {
+      groups.push(group);
+      group = [ev];
+      groupEnd = end;
+    }
+  }
+  if (group.length > 0) groups.push(group);
+
+  for (const g of groups) {
+    const cols: number[] = [];
+    for (const ev of g) {
+      const start = timeToMin(ev.inicio);
+      const end = ev.fin ? timeToMin(ev.fin) : start + 60;
+      let placed = -1;
+      for (let c = 0; c < cols.length; c++) {
+        if (cols[c] <= start) {
+          placed = c;
+          cols[c] = end;
+          break;
+        }
+      }
+      if (placed === -1) {
+        placed = cols.length;
+        cols.push(end);
+      }
+      result.set(ev.id, { col: placed, totalCols: 0 });
+    }
+    const totalCols = cols.length;
+    for (const ev of g) {
+      result.get(ev.id)!.totalCols = totalCols;
+    }
+  }
+
+  return result;
+}
+
 interface QuickAdd {
   fecha: string;
   hora: number;
@@ -45,8 +108,16 @@ export function Calendar() {
   const { state, dispatch, showToast, calModo, setCalModo, calFecha, setCalFecha, eventosDelDia, abrirDetalle } = useApp();
   const { hourFormat } = state.ajustes;
   const hoy = hoyISO();
-  const horaActual = new Date().getHours();
-  const minutoActual = new Date().getMinutes();
+
+  // Auto-updating clock for the red time line
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+  const horaActual = now.getHours();
+  const minutoActual = now.getMinutes();
+  const nowMin = horaActual * 60 + minutoActual;
 
   const dias = useMemo(() => {
     if (calModo === 'dia') return [new Date(calFecha)];
@@ -90,6 +161,17 @@ export function Calendar() {
         }),
     [state.tareas],
   );
+
+  // Pre-compute overlap layout per day
+  const dayLayouts = useMemo(() => {
+    const layouts = new Map<string, Map<string, LayoutInfo>>();
+    for (const d of dias) {
+      const iso = toISODate(d);
+      const events = eventosDelDia(iso);
+      layouts.set(iso, calcEventLayout(events));
+    }
+    return layouts;
+  }, [dias, eventosDelDia]);
 
   // Quick-add state
   const [quickAdd, setQuickAdd] = useState<QuickAdd | null>(null);
@@ -157,7 +239,6 @@ export function Calendar() {
     if (!taskId) return;
     const task = state.tareas.find((t) => t.id === taskId);
     if (!task) return;
-    // Preserve original duration if task already had start/end times
     let durMin = 60;
     if (task.inicio && task.fin) {
       const oldStartH = parseInt(task.inicio.split(':')[0], 10);
@@ -330,8 +411,10 @@ export function Calendar() {
                   hoy={hoy}
                   horaActual={horaActual}
                   minutoActual={minutoActual}
+                  nowMin={nowMin}
                   hourFormat={hourFormat}
                   eventosDelDia={eventosDelDia}
+                  dayLayouts={dayLayouts}
                   onAbrir={abrirDetalle}
                   onSlotClick={openQuickAdd}
                   onEventDragStart={handleDragStart}
@@ -344,7 +427,7 @@ export function Calendar() {
             </div>
           </div>
 
-          {/* ===== SIDEBAR: Draggable suggestions ===== */}
+          {/* ===== SIDEBAR: Draggable tasks ===== */}
           {tareasPendientes.length > 0 && (
             <div className="gcal-sidebar">
               <div className="gcal-sidebar-title">Tareas pendientes</div>
@@ -384,8 +467,10 @@ interface TimeRowProps {
   hoy: string;
   horaActual: number;
   minutoActual: number;
+  nowMin: number;
   hourFormat: HourFormat;
   eventosDelDia: (iso: string) => Task[];
+  dayLayouts: Map<string, Map<string, LayoutInfo>>;
   onAbrir: (id: string) => void;
   onSlotClick: (fecha: string, hora: number, e: React.MouseEvent) => void;
   onEventDragStart: (e: React.DragEvent, taskId: string) => void;
@@ -395,7 +480,7 @@ interface TimeRowProps {
   onDrop: (e: React.DragEvent, fecha: string, hora: number) => void;
 }
 
-function TimeRow({ hora, dias, hoy, horaActual, minutoActual, hourFormat, eventosDelDia, onAbrir, onSlotClick, onEventDragStart, dragOverSlot, onDragOver, onDragLeave, onDrop }: TimeRowProps) {
+function TimeRow({ hora, dias, hoy, horaActual, minutoActual, nowMin, hourFormat, eventosDelDia, dayLayouts, onAbrir, onSlotClick, onEventDragStart, dragOverSlot, onDragOver, onDragLeave, onDrop }: TimeRowProps) {
   return (
     <>
       <div className="gcal-time-label">
@@ -407,6 +492,7 @@ function TimeRow({ hora, dias, hoy, horaActual, minutoActual, hourFormat, evento
         const showLine = isToday && hora === horaActual;
         const slotKey = `${iso}-${hora}`;
         const isDragOver = dragOverSlot === slotKey;
+        const layout = dayLayouts.get(iso);
         const evs = eventosDelDia(iso).filter(
           (t) => parseInt(t.inicio.split(':')[0], 10) === hora,
         );
@@ -437,11 +523,28 @@ function TimeRow({ hora, dias, hoy, horaActual, minutoActual, hourFormat, evento
               const durationMin = (endH - hora) * 60 + endMin - startMin;
               const topPct = (startMin / 60) * 100;
               const heightPct = Math.max((durationMin / 60) * 100, 22);
+
+              const li = layout?.get(t.id);
+              const col = li?.col ?? 0;
+              const totalCols = li?.totalCols ?? 1;
+              const widthPct = 100 / totalCols;
+              const leftPct = col * widthPct;
+
+              const evEndMin = endH * 60 + endMin;
+              const isPast = isToday && evEndMin <= nowMin && !t.hecha;
+
               return (
                 <div
                   key={t.id}
-                  className={`gcal-event${t.hecha ? ' done' : ''}`}
-                  style={{ top: `${topPct}%`, height: `${heightPct}%`, minHeight: '22px' }}
+                  className={`gcal-event${t.hecha ? ' done' : ''}${isPast ? ' past' : ''}`}
+                  style={{
+                    top: `${topPct}%`,
+                    height: `${heightPct}%`,
+                    minHeight: '22px',
+                    left: totalCols > 1 ? `calc(${leftPct}% + 1px)` : '2px',
+                    width: totalCols > 1 ? `calc(${widthPct}% - 3px)` : undefined,
+                    right: totalCols > 1 ? 'auto' : '2px',
+                  }}
                   title={t.titulo}
                   role="button"
                   tabIndex={0}

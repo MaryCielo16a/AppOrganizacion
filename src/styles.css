@@ -419,6 +419,7 @@ body.light .gcal-time-slot.today-col{background:rgba(var(--accent-rgb,186,78,120
 .gcal-event[draggable]{cursor:grab}
 .gcal-event[draggable]:active{cursor:grabbing;opacity:.6}
 .gcal-event.done{background:var(--panel-2);color:var(--text-dim);text-decoration:line-through;border-left-color:var(--line)}
+.gcal-event.past{background:var(--panel-2);color:var(--text-dim);border-left-color:var(--text-dim);opacity:.7}
 .gcal-event-title{display:block;font-weight:600;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gcal-event-time{display:block;font-size:10px;opacity:.85}
 
