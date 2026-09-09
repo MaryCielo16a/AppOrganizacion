@@ -206,7 +206,7 @@ export function reducer(state: PersistedState, action: Action): PersistedState {
     case 'RESET_MI_DIA':
       return {
         ...state,
-        tareas: state.tareas.map((t) => (t.miDia && !t.hecha ? { ...t, miDia: false } : t)),
+        tareas: state.tareas.map((t) => (t.miDia ? { ...t, miDia: false } : t)),
       };
 
     case 'LOAD_CLOUD':

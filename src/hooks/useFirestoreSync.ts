@@ -8,14 +8,14 @@ import { hydrate } from '../store/reducer';
 import { hoyISO } from '../utils/date';
 
 const DEBOUNCE = 800;
-const MI_DIA_KEY = 'organizador.lastMiDiaReset.v4';
+const MI_DIA_KEY = 'organizador.lastMiDiaReset.v5';
 
 function resetMiDiaSiNuevoDia(datos: PersistedState): { state: PersistedState; changed: boolean } {
   const hoy = hoyISO();
   try {
     const last = localStorage.getItem(MI_DIA_KEY);
     if (last === hoy) return { state: datos, changed: false };
-    const tareas = datos.tareas.map((t) => (t.miDia && !t.hecha ? { ...t, miDia: false } : t));
+    const tareas = datos.tareas.map((t) => (t.miDia ? { ...t, miDia: false } : t));
     localStorage.setItem(MI_DIA_KEY, hoy);
     return { state: { ...datos, tareas }, changed: true };
   } catch {
