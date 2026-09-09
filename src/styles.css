@@ -420,6 +420,54 @@ body.light .gcal-time-slot.today-col{background:rgba(var(--accent-rgb,186,78,120
 .gcal-event-title{display:block;font-weight:600;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gcal-event-time{display:block;font-size:10px;opacity:.85}
 
+/* -- Body wrapper (day/week + sidebar) -- */
+.gcal-body{display:flex;flex:1;overflow:hidden}
+.gcal-body .gcal-time-wrap{flex:1;overflow:auto}
+
+/* -- Drag over highlight on time slots -- */
+.gcal-time-slot.drag-over{
+  background:rgba(var(--accent-rgb,186,78,120),.18)!important;
+  outline:2px dashed var(--accent);outline-offset:-2px;
+  transition:background .1s;
+}
+
+/* -- Sidebar: draggable suggestions -- */
+.gcal-sidebar{
+  width:240px;flex-shrink:0;border-left:1px solid var(--line);
+  display:flex;flex-direction:column;overflow:hidden;
+  background:var(--bg);
+}
+.gcal-sidebar-title{
+  padding:14px 16px 10px;font-size:13px;font-weight:700;
+  color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;
+  border-bottom:1px solid var(--line);
+}
+.gcal-sidebar-list{
+  flex:1;overflow-y:auto;padding:6px 0;
+}
+.gcal-sidebar-item{
+  display:flex;align-items:center;gap:8px;padding:8px 12px;
+  cursor:grab;transition:background .12s;user-select:none;
+}
+.gcal-sidebar-item:hover{background:var(--panel-2)}
+.gcal-sidebar-item:active{cursor:grabbing}
+.gcal-sidebar-grip{
+  color:var(--text-dim);font-size:14px;flex-shrink:0;opacity:.5;
+}
+.gcal-sidebar-info{
+  flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;
+}
+.gcal-sidebar-name{
+  font-size:12.5px;font-weight:500;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.gcal-sidebar-meta{font-size:10.5px;color:var(--text-dim)}
+.gcal-sidebar-hint{
+  padding:10px 14px;font-size:10.5px;color:var(--text-dim);
+  border-top:1px solid var(--line);text-align:center;
+  opacity:.7;
+}
+
 /* -- Responsive -- */
 @media(max-width:700px){
   .gcal-toolbar{flex-direction:column;align-items:stretch;padding:10px 14px;gap:8px}
@@ -432,7 +480,8 @@ body.light .gcal-time-slot.today-col{background:rgba(var(--accent-rgb,186,78,120
   .gcal-month-ev{font-size:9px;padding:1px 3px}
   .gcal-time-head-num{width:28px;height:28px;font-size:16px}
   .gcal-time-label{font-size:9px;padding:0 4px}
-  .gcal-sug-dropdown{width:280px;right:10px}
+  .gcal-sidebar{display:none}
+  .gcal-body{flex-direction:column}
 }
 
 /* ===== POMODORO ===== */

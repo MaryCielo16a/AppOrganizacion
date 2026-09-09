@@ -86,11 +86,9 @@ export function Calendar() {
           if (a.quadrant > b.quadrant) return 1;
           return 0;
         })
-        .slice(0, 12),
+        .slice(0, 20),
     [state.tareas],
   );
-
-  const [sugOpen, setSugOpen] = useState(false);
 
   // Quick-add state
   const [quickAdd, setQuickAdd] = useState<QuickAdd | null>(null);
@@ -98,12 +96,14 @@ export function Calendar() {
   const quickInputRef = useRef<HTMLInputElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
 
+  // Drag state
+  const [dragOverSlot, setDragOverSlot] = useState<string | null>(null);
+
   const openQuickAdd = useCallback((fecha: string, hora: number, e: React.MouseEvent) => {
     const rect = sectionRef.current?.getBoundingClientRect();
     if (!rect) return;
     let x = e.clientX - rect.left;
     let y = e.clientY - rect.top;
-    // Keep popup within bounds
     if (x + 280 > rect.width) x = rect.width - 290;
     if (x < 10) x = 10;
     if (y + 180 > rect.height) y = y - 180;
@@ -133,16 +133,39 @@ export function Calendar() {
     setQuickTitle('');
   }, [quickAdd, quickTitle, dispatch, showToast, hourFormat, hoy]);
 
-  const agregarAlCal = (id: string) => {
-    const target = calModo === 'dia' ? toISODate(calFecha) : hoy;
-    const now = new Date();
-    let nextHour = now.getHours() + 1;
-    if (nextHour > 22) nextHour = 9;
-    const inicio = `${String(nextHour).padStart(2, '0')}:00`;
-    const fin = `${String(Math.min(nextHour + 1, 23)).padStart(2, '0')}:00`;
-    dispatch({ type: 'UPDATE_TASK', id, patch: { fecha: target, inicio, fin } });
-    showToast('Tarea agregada al calendario');
-  };
+  // Drag & drop handlers
+  const handleDragStart = useCallback((e: React.DragEvent, taskId: string) => {
+    e.dataTransfer.setData('text/plain', taskId);
+    e.dataTransfer.effectAllowed = 'move';
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, slotKey: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverSlot(slotKey);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverSlot(null);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, fecha: string, hora: number) => {
+    e.preventDefault();
+    setDragOverSlot(null);
+    const taskId = e.dataTransfer.getData('text/plain');
+    if (!taskId) return;
+    const task = state.tareas.find((t) => t.id === taskId);
+    if (!task) return;
+    const inicio = `${String(hora).padStart(2, '0')}:00`;
+    const finH = Math.min(hora + 1, 23);
+    const fin = `${String(finH).padStart(2, '0')}:00`;
+    dispatch({
+      type: 'UPDATE_TASK',
+      id: taskId,
+      patch: { fecha, inicio, fin, miDia: fecha === hoy },
+    });
+    showToast(`${task.titulo} → ${fmtHoraNum(hora, hourFormat)}`);
+  }, [state.tareas, dispatch, showToast, hourFormat, hoy]);
 
   const mover = (signo: number) => {
     if (calModo === 'mes') {
@@ -171,11 +194,6 @@ export function Calendar() {
           <h2 className="gcal-title">{tituloHeader}</h2>
         </div>
         <div className="gcal-toolbar-right">
-          {sinHorario.length > 0 && (
-            <button type="button" className="gcal-sug-btn" onClick={() => setSugOpen((v) => !v)} title="Tareas sin horario">
-              📋 {sinHorario.length}
-            </button>
-          )}
           <div className="gcal-mode-tabs">
             {(['dia', 'semana', 'mes'] as const).map((m) => (
               <button
@@ -190,38 +208,6 @@ export function Calendar() {
           </div>
         </div>
       </div>
-
-      {/* ===== SUGGESTIONS DROPDOWN ===== */}
-      {sugOpen && sinHorario.length > 0 && (
-        <div className="gcal-sug-dropdown">
-          <div className="gcal-sug-header">
-            <span>Tareas sin horario</span>
-            <button type="button" className="gcal-sug-close" onClick={() => setSugOpen(false)}>✕</button>
-          </div>
-          <div className="gcal-sug-list">
-            {sinHorario.map((t) => (
-              <div key={t.id} className="gcal-sug-item" onClick={() => abrirDetalle(t.id)}>
-                <div className="gcal-sug-dot" />
-                <div className="gcal-sug-info">
-                  <span className="gcal-sug-name">{t.titulo}</span>
-                  <span className="gcal-sug-meta">
-                    {t.estPomos} 🍅{t.quadrant !== 'Q2' ? ` · ${t.quadrant}` : ''}
-                    {t.importante ? ' · ★' : ''}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  className="gcal-sug-add"
-                  onClick={(e) => { e.stopPropagation(); agregarAlCal(t.id); }}
-                  title="Agregar al calendario"
-                >
-                  +
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* ===== QUICK ADD POPUP ===== */}
       {quickAdd && (
@@ -302,41 +288,75 @@ export function Calendar() {
         </div>
       )}
 
-      {/* ===== DAY / WEEK VIEW ===== */}
+      {/* ===== DAY / WEEK VIEW with sidebar ===== */}
       {calModo !== 'mes' && (
-        <div className="gcal-time-wrap">
-          <div className="gcal-time-grid" style={{ gridTemplateColumns: `56px repeat(${dias.length}, 1fr)` }}>
-            {/* Header row */}
-            <div className="gcal-time-corner" />
-            {dias.map((d) => {
-              const iso = toISODate(d);
-              const isToday = iso === hoy;
-              return (
-                <div key={`h-${iso}`} className={`gcal-time-head${isToday ? ' today' : ''}`}>
-                  <span className="gcal-time-head-day">{DIAS_C[d.getDay()].toUpperCase()}</span>
-                  <span className={`gcal-time-head-num${isToday ? ' today-circle' : ''}`}>
-                    {d.getDate()}
-                  </span>
-                </div>
-              );
-            })}
+        <div className="gcal-body">
+          <div className="gcal-time-wrap">
+            <div className="gcal-time-grid" style={{ gridTemplateColumns: `56px repeat(${dias.length}, 1fr)` }}>
+              {/* Header row */}
+              <div className="gcal-time-corner" />
+              {dias.map((d) => {
+                const iso = toISODate(d);
+                const isToday = iso === hoy;
+                return (
+                  <div key={`h-${iso}`} className={`gcal-time-head${isToday ? ' today' : ''}`}>
+                    <span className="gcal-time-head-day">{DIAS_C[d.getDay()].toUpperCase()}</span>
+                    <span className={`gcal-time-head-num${isToday ? ' today-circle' : ''}`}>
+                      {d.getDate()}
+                    </span>
+                  </div>
+                );
+              })}
 
-            {/* Time rows */}
-            {HORAS.map((h) => (
-              <TimeRow
-                key={h}
-                hora={h}
-                dias={dias}
-                hoy={hoy}
-                horaActual={horaActual}
-                minutoActual={minutoActual}
-                hourFormat={hourFormat}
-                eventosDelDia={eventosDelDia}
-                onAbrir={abrirDetalle}
-                onSlotClick={openQuickAdd}
-              />
-            ))}
+              {/* Time rows */}
+              {HORAS.map((h) => (
+                <TimeRow
+                  key={h}
+                  hora={h}
+                  dias={dias}
+                  hoy={hoy}
+                  horaActual={horaActual}
+                  minutoActual={minutoActual}
+                  hourFormat={hourFormat}
+                  eventosDelDia={eventosDelDia}
+                  onAbrir={abrirDetalle}
+                  onSlotClick={openQuickAdd}
+                  dragOverSlot={dragOverSlot}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                />
+              ))}
+            </div>
           </div>
+
+          {/* ===== SIDEBAR: Draggable suggestions ===== */}
+          {sinHorario.length > 0 && (
+            <div className="gcal-sidebar">
+              <div className="gcal-sidebar-title">Tareas sin horario</div>
+              <div className="gcal-sidebar-list">
+                {sinHorario.map((t) => (
+                  <div
+                    key={t.id}
+                    className="gcal-sidebar-item"
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, t.id)}
+                    onClick={() => abrirDetalle(t.id)}
+                  >
+                    <div className="gcal-sidebar-grip">⠿</div>
+                    <div className="gcal-sidebar-info">
+                      <span className="gcal-sidebar-name">{t.titulo}</span>
+                      <span className="gcal-sidebar-meta">
+                        {t.estPomos} 🍅{t.quadrant !== 'Q2' ? ` · ${t.quadrant}` : ''}
+                        {t.importante ? ' · ★' : ''}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="gcal-sidebar-hint">Arrastra una tarea a una hora del calendario</div>
+            </div>
+          )}
         </div>
       )}
     </section>
@@ -353,9 +373,13 @@ interface TimeRowProps {
   eventosDelDia: (iso: string) => Task[];
   onAbrir: (id: string) => void;
   onSlotClick: (fecha: string, hora: number, e: React.MouseEvent) => void;
+  dragOverSlot: string | null;
+  onDragOver: (e: React.DragEvent, slotKey: string) => void;
+  onDragLeave: () => void;
+  onDrop: (e: React.DragEvent, fecha: string, hora: number) => void;
 }
 
-function TimeRow({ hora, dias, hoy, horaActual, minutoActual, hourFormat, eventosDelDia, onAbrir, onSlotClick }: TimeRowProps) {
+function TimeRow({ hora, dias, hoy, horaActual, minutoActual, hourFormat, eventosDelDia, onAbrir, onSlotClick, dragOverSlot, onDragOver, onDragLeave, onDrop }: TimeRowProps) {
   return (
     <>
       <div className="gcal-time-label">
@@ -365,17 +389,22 @@ function TimeRow({ hora, dias, hoy, horaActual, minutoActual, hourFormat, evento
         const iso = toISODate(d);
         const isToday = iso === hoy;
         const showLine = isToday && hora === horaActual;
+        const slotKey = `${iso}-${hora}`;
+        const isDragOver = dragOverSlot === slotKey;
         const evs = eventosDelDia(iso).filter(
           (t) => parseInt(t.inicio.split(':')[0], 10) === hora,
         );
         return (
           <div
-            key={`${iso}-${hora}`}
-            className={`gcal-time-slot${isToday ? ' today-col' : ''}`}
+            key={slotKey}
+            className={`gcal-time-slot${isToday ? ' today-col' : ''}${isDragOver ? ' drag-over' : ''}`}
             onClick={(e) => {
               if ((e.target as HTMLElement).closest('.gcal-event')) return;
               onSlotClick(iso, hora, e);
             }}
+            onDragOver={(e) => onDragOver(e, slotKey)}
+            onDragLeave={onDragLeave}
+            onDrop={(e) => onDrop(e, iso, hora)}
           >
             {showLine && (
               <div
