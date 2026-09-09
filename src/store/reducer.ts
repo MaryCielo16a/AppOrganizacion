@@ -228,6 +228,7 @@ export function normalizarAjustes(a: Settings): Settings {
     corto: Math.max(1, Math.round(a.corto) || 1),
     largo: Math.max(1, Math.round(a.largo) || 1),
     longInterval: Math.max(1, Math.round(a.longInterval) || 1),
+    lockTimeout: Math.max(1, Math.min(60, Math.round(a.lockTimeout) || 5)),
     alarmRepeat: Math.max(1, Math.round(a.alarmRepeat) || 1),
     alarmVolume: Math.min(100, Math.max(0, Math.round(a.alarmVolume) || 0)),
     focusVolume: Math.min(100, Math.max(0, Math.round(a.focusVolume) || 0)),

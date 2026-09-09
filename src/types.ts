@@ -95,6 +95,9 @@ export interface Settings {
   darkRunning: boolean;
   reminderType: ReminderType;
   reminderMin: number;
+  lockEnabled: boolean;
+  lockPin: string;
+  lockTimeout: number;
 }
 
 /** Estado que se guarda en localStorage. */

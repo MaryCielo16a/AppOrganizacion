@@ -21,6 +21,9 @@ export const DEFAULT_SETTINGS: Settings = {
   darkRunning: false,
   reminderType: 'ultimo',
   reminderMin: 5,
+  lockEnabled: false,
+  lockPin: '',
+  lockTimeout: 5,
 };
 
 export const DEFAULT_LISTS: TaskListDef[] = [{ id: 'tareas', nombre: 'Tareas', fija: true }];

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useApp } from '../store/AppContext';
 import { DEFAULT_SETTINGS } from '../store/defaults';
 import { normalizarAjustes } from '../store/reducer';
@@ -333,6 +333,9 @@ export function SettingsPanel() {
             </div>
           </div>
 
+          {/* ---- BLOQUEO ---- */}
+          <LockSettings draft={draft} setDraft={setDraft} set={set} num={num} showToast={showToast} />
+
           <div className="modal-actions">
             <button type="button" className="ghost-btn" onClick={restablecer}>
               Restablecer
@@ -343,6 +346,136 @@ export function SettingsPanel() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function LockSettings({
+  draft,
+  setDraft,
+  set,
+  num,
+  showToast,
+}: {
+  draft: Settings;
+  setDraft: React.Dispatch<React.SetStateAction<Settings>>;
+  set: <K extends keyof Settings>(k: K, v: Settings[K]) => void;
+  num: (v: string) => number;
+  showToast: (msg: string) => void;
+}) {
+  const [pinInput, setPinInput] = useState('');
+  const [showPinField, setShowPinField] = useState<'new' | 'change' | null>(null);
+  const pinRef = useRef<HTMLInputElement>(null);
+
+  const handlePinSubmit = () => {
+    if (!/^\d{4}$/.test(pinInput)) {
+      showToast('El PIN debe ser de 4 dígitos');
+      return;
+    }
+    if (showPinField === 'new') {
+      setDraft((d) => ({ ...d, lockEnabled: true, lockPin: pinInput }));
+      showToast('Bloqueo activado');
+    } else {
+      set('lockPin', pinInput);
+      showToast('PIN actualizado');
+    }
+    setPinInput('');
+    setShowPinField(null);
+  };
+
+  return (
+    <div className="set-group">
+      <div className="set-group-title">🔒 BLOQUEO</div>
+      <div className="set-row">
+        <span>
+          Bloqueo de app{' '}
+          <i className="help" title="Bloquea la app con un PIN de 4 dígitos al cambiar de pestaña o tras inactividad">
+            ?
+          </i>
+        </span>
+        <label className="switch">
+          <input
+            type="checkbox"
+            checked={draft.lockEnabled}
+            onChange={(e) => {
+              if (e.target.checked && !draft.lockPin) {
+                setShowPinField('new');
+                setPinInput('');
+                setTimeout(() => pinRef.current?.focus(), 50);
+              } else {
+                set('lockEnabled', e.target.checked);
+                if (!e.target.checked) setShowPinField(null);
+              }
+            }}
+          />
+          <span className="slider" />
+        </label>
+      </div>
+
+      {showPinField && (
+        <div className="set-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
+          <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>
+            {showPinField === 'new' ? 'Establece un PIN de 4 dígitos:' : 'Nuevo PIN de 4 dígitos:'}
+          </span>
+          <div className="inline">
+            <input
+              ref={pinRef}
+              type="tel"
+              inputMode="numeric"
+              className="mini"
+              maxLength={4}
+              placeholder="····"
+              value={pinInput}
+              style={{ width: 70, textAlign: 'center', fontSize: 18, letterSpacing: 6 }}
+              onChange={(e) => setPinInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              onKeyDown={(e) => { if (e.key === 'Enter') handlePinSubmit(); }}
+            />
+            <button type="button" className="ghost-btn" onClick={handlePinSubmit}>
+              Confirmar
+            </button>
+            <button
+              type="button"
+              className="ghost-btn"
+              onClick={() => { setShowPinField(null); setPinInput(''); }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {draft.lockEnabled && !showPinField && (
+        <>
+          <div className="set-row">
+            <span>Cambiar PIN</span>
+            <button
+              type="button"
+              className="ghost-btn"
+              onClick={() => {
+                setShowPinField('change');
+                setPinInput('');
+                setTimeout(() => pinRef.current?.focus(), 50);
+              }}
+            >
+              Cambiar
+            </button>
+          </div>
+          <div className="set-row">
+            <span>Bloquear tras inactividad</span>
+            <div className="inline">
+              <input
+                className="mini"
+                type="number"
+                min={1}
+                max={60}
+                value={draft.lockTimeout}
+                onChange={(e) => set('lockTimeout', Math.max(1, Math.min(60, num(e.target.value) || 1)))}
+              />
+              <span className="unit">min</span>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

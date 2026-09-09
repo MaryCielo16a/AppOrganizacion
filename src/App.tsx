@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp } from './store/AppContext';
 import { useAuth } from './store/AuthContext';
 import { AuthScreen } from './components/AuthScreen';
+import { LockScreen } from './components/LockScreen';
 import { Sidebar } from './components/Sidebar';
 import { TaskList } from './components/TaskList';
 import { TaskDetail } from './components/TaskDetail';
@@ -31,7 +32,48 @@ export function App() {
     setSidebarAbierto,
   } = useApp();
 
-  const { theme, darkRunning } = state.ajustes;
+  const { theme, darkRunning, lockEnabled, lockPin, lockTimeout } = state.ajustes;
+
+  // --- Bloqueo de app ---
+  const [locked, setLocked] = useState(false);
+  const lastActivity = useRef(Date.now());
+
+  const resetActivity = useCallback(() => {
+    lastActivity.current = Date.now();
+  }, []);
+
+  // Bloquear al cambiar de pestaña (visibilitychange).
+  useEffect(() => {
+    if (!lockEnabled || !lockPin) return;
+    const onVisChange = () => {
+      if (document.hidden) return;
+      const elapsed = (Date.now() - lastActivity.current) / 60_000;
+      if (elapsed >= lockTimeout) setLocked(true);
+    };
+    document.addEventListener('visibilitychange', onVisChange);
+    return () => document.removeEventListener('visibilitychange', onVisChange);
+  }, [lockEnabled, lockPin, lockTimeout]);
+
+  // Temporizador de inactividad.
+  useEffect(() => {
+    if (!lockEnabled || !lockPin) return;
+    const events = ['mousedown', 'keydown', 'touchstart', 'scroll'] as const;
+    const handler = () => { lastActivity.current = Date.now(); };
+    events.forEach((e) => window.addEventListener(e, handler, { passive: true }));
+    const interval = window.setInterval(() => {
+      const elapsed = (Date.now() - lastActivity.current) / 60_000;
+      if (elapsed >= lockTimeout) setLocked(true);
+    }, 30_000);
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, handler));
+      window.clearInterval(interval);
+    };
+  }, [lockEnabled, lockPin, lockTimeout]);
+
+  const handleUnlock = useCallback(() => {
+    setLocked(false);
+    resetActivity();
+  }, [resetActivity]);
 
   // Tema de color y "modo oscuro al ejecutar".
   useEffect(() => {
@@ -70,6 +112,10 @@ export function App() {
 
   if (!user) {
     return <AuthScreen />;
+  }
+
+  if (locked && lockEnabled && lockPin) {
+    return <LockScreen pin={lockPin} onUnlock={handleUnlock} />;
   }
 
   return (
