@@ -8,7 +8,7 @@ import { hydrate } from '../store/reducer';
 import { hoyISO } from '../utils/date';
 
 const DEBOUNCE = 800;
-const MI_DIA_KEY = 'organizador.lastMiDiaReset.v3';
+const MI_DIA_KEY = 'organizador.lastMiDiaReset.v4';
 
 function resetMiDiaSiNuevoDia(datos: PersistedState): { state: PersistedState; changed: boolean } {
   const hoy = hoyISO();
@@ -34,13 +34,7 @@ export function useFirestoreSync(
 
   // Cargar datos del usuario al iniciar sesión
   useEffect(() => {
-    if (!uid) {
-      // Sin usuario: resetear Mi día sobre datos locales
-      const { state: reset, changed } = resetMiDiaSiNuevoDia(state);
-      if (changed) dispatch({ type: 'LOAD_CLOUD', state: reset });
-      setCloudLoaded(true);
-      return;
-    }
+    if (!uid) return;
     let cancelado = false;
 
     (async () => {
