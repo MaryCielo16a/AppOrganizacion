@@ -33,6 +33,13 @@ export interface PomodoroSession {
   minutos: number;
 }
 
+/** Una subtarea dentro de una tarea principal. */
+export interface Subtask {
+  id: string;
+  titulo: string;
+  hecha: boolean;
+}
+
 /** Una tarea del organizador. */
 export interface Task {
   id: string;
@@ -59,6 +66,8 @@ export interface Task {
   areaId: string;
   /** Meta asociada. */
   goalId: string;
+  /** Subtareas. */
+  subtareas: Subtask[];
 }
 
 /** Una lista de tareas de la barra lateral. */

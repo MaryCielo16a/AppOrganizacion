@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { esEventoCalendario, useApp } from '../store/AppContext';
 import type { Task } from '../types';
 
 export function TaskDetail() {
   const { state, dispatch, detalleId, cerrarDetalle, irA, showToast } = useApp();
+  const [newSub, setNewSub] = useState('');
 
   const tarea = state.tareas.find((t) => t.id === detalleId) ?? null;
   if (!tarea) return null;
@@ -10,6 +12,9 @@ export function TaskDetail() {
   const completados = tarea.sesiones.length;
   const minutosTotal = tarea.sesiones.reduce((a, s) => a + s.minutos, 0);
   const tomates = Math.max(tarea.estPomos, completados);
+
+  const subDone = tarea.subtareas.filter((s) => s.hecha).length;
+  const subTotal = tarea.subtareas.length;
 
   const patch = (p: Partial<Task>) => dispatch({ type: 'UPDATE_TASK', id: tarea.id, patch: p });
 
@@ -23,6 +28,13 @@ export function TaskDetail() {
     dispatch({ type: 'SET_ACTIVE_TASK', id: tarea.id });
     showToast(`Tarea activa: ${tarea.titulo}`);
     irA('pomodoro');
+  };
+
+  const addSubtask = () => {
+    const titulo = newSub.trim();
+    if (!titulo) return;
+    dispatch({ type: 'ADD_SUBTASK', taskId: tarea.id, titulo });
+    setNewSub('');
   };
 
   return (
@@ -59,6 +71,61 @@ export function TaskDetail() {
         <div className="d-field">
           <label htmlFor="dNota">Notas</label>
           <textarea id="dNota" value={tarea.nota} onChange={(e) => patch({ nota: e.target.value })} />
+        </div>
+
+        {/* ===== SUBTAREAS ===== */}
+        <div className="d-field subtareas-section">
+          <label>Subtareas {subTotal > 0 && <span className="sub-count">({subDone}/{subTotal})</span>}</label>
+
+          {subTotal > 0 && (
+            <div className="sub-progress-bar">
+              <div
+                className="sub-progress-fill"
+                style={{ width: `${subTotal > 0 ? (subDone / subTotal) * 100 : 0}%` }}
+              />
+            </div>
+          )}
+
+          <ul className="sub-list">
+            {tarea.subtareas.map((s) => (
+              <li key={s.id} className={`sub-item${s.hecha ? ' done' : ''}`}>
+                <input
+                  type="checkbox"
+                  checked={s.hecha}
+                  onChange={() => dispatch({ type: 'TOGGLE_SUBTASK', taskId: tarea.id, subtaskId: s.id })}
+                  className="sub-check"
+                />
+                <input
+                  type="text"
+                  value={s.titulo}
+                  onChange={(e) => dispatch({ type: 'RENAME_SUBTASK', taskId: tarea.id, subtaskId: s.id, titulo: e.target.value })}
+                  className={`sub-title${s.hecha ? ' done' : ''}`}
+                />
+                <button
+                  type="button"
+                  className="sub-delete"
+                  onClick={() => dispatch({ type: 'DELETE_SUBTASK', taskId: tarea.id, subtaskId: s.id })}
+                  title="Eliminar subtarea"
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          <div className="sub-add">
+            <input
+              type="text"
+              placeholder="Agregar subtarea..."
+              value={newSub}
+              onChange={(e) => setNewSub(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') addSubtask(); }}
+              className="sub-add-input"
+            />
+            <button type="button" className="sub-add-btn" onClick={addSubtask} title="Agregar">
+              +
+            </button>
+          </div>
         </div>
 
         <div className="d-field">

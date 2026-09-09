@@ -8,6 +8,7 @@ import type {
   PomodoroSession,
   Quadrant,
   Settings,
+  Subtask,
   Task,
   TaskListDef,
 } from '../types';
@@ -37,6 +38,10 @@ export type Action =
   | { type: 'ADD_GOAL'; areaId: string; title: string; horizon?: GoalHorizon; focus?: GoalFocus }
   | { type: 'UPDATE_GOAL'; id: string; patch: Partial<Goal> }
   | { type: 'DELETE_GOAL'; id: string }
+  | { type: 'ADD_SUBTASK'; taskId: string; titulo: string }
+  | { type: 'TOGGLE_SUBTASK'; taskId: string; subtaskId: string }
+  | { type: 'DELETE_SUBTASK'; taskId: string; subtaskId: string }
+  | { type: 'RENAME_SUBTASK'; taskId: string; subtaskId: string; titulo: string }
   | { type: 'REORDER_TASK'; dragId: string; refId: string; position: 'before' | 'after' }
   | { type: 'RESET_MI_DIA' }
   | { type: 'SEED_EXAMPLES' }
@@ -68,6 +73,7 @@ function crearTarea(input: NewTaskInput): Task {
     quadrant: input.quadrant ?? 'Q2',
     areaId: input.areaId ?? '',
     goalId: input.goalId ?? '',
+    subtareas: [],
   };
 }
 
@@ -189,6 +195,46 @@ export function reducer(state: PersistedState, action: Action): PersistedState {
         ),
       };
 
+    case 'ADD_SUBTASK': {
+      const sub: Subtask = { id: uid(), titulo: action.titulo, hecha: false };
+      return {
+        ...state,
+        tareas: state.tareas.map((t) =>
+          t.id === action.taskId ? { ...t, subtareas: [...t.subtareas, sub] } : t,
+        ),
+      };
+    }
+
+    case 'TOGGLE_SUBTASK':
+      return {
+        ...state,
+        tareas: state.tareas.map((t) =>
+          t.id === action.taskId
+            ? { ...t, subtareas: t.subtareas.map((s) => s.id === action.subtaskId ? { ...s, hecha: !s.hecha } : s) }
+            : t,
+        ),
+      };
+
+    case 'DELETE_SUBTASK':
+      return {
+        ...state,
+        tareas: state.tareas.map((t) =>
+          t.id === action.taskId
+            ? { ...t, subtareas: t.subtareas.filter((s) => s.id !== action.subtaskId) }
+            : t,
+        ),
+      };
+
+    case 'RENAME_SUBTASK':
+      return {
+        ...state,
+        tareas: state.tareas.map((t) =>
+          t.id === action.taskId
+            ? { ...t, subtareas: t.subtareas.map((s) => s.id === action.subtaskId ? { ...s, titulo: action.titulo } : s) }
+            : t,
+        ),
+      };
+
     case 'REORDER_TASK': {
       const { dragId, refId, position } = action;
       if (dragId === refId) return state;
@@ -262,6 +308,7 @@ export function hydrate(guardado: PersistedState): PersistedState {
       quadrant: validQ.has(t?.quadrant) ? t.quadrant : 'Q2',
       areaId: t?.areaId ?? '',
       goalId: t?.goalId ?? '',
+      subtareas: Array.isArray(t?.subtareas) ? t.subtareas : [],
     })),
     listas,
     ajustes: normalizarAjustes({ ...DEFAULT_SETTINGS, ...(guardado.ajustes ?? {}) }),

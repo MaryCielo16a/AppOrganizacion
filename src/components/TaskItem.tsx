@@ -92,7 +92,14 @@ export function TaskItem({ tarea, onDragStart, onDragOver, onDrop, isDragOver }:
         }}
       >
         <div className="task-title">{tarea.titulo}</div>
-        <div className="task-meta">{meta.join('  ·  ')}</div>
+        <div className="task-meta">
+          {meta.join('  ·  ')}
+          {tarea.subtareas.length > 0 && (
+            <span className="task-sub-badge">
+              {tarea.subtareas.filter((s) => s.hecha).length}/{tarea.subtareas.length} subtareas
+            </span>
+          )}
+        </div>
       </div>
 
       <span className="pomo-count" title="Pomodoros completados / estimados">
