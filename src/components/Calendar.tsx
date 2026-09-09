@@ -4,38 +4,70 @@ import type { HourFormat, Task } from '../types';
 import {
   DIAS_C,
   MESES,
-  fechaLarga,
   fmtHora,
   fmtHoraNum,
   hoyISO,
   inicioDeSemana,
+  isoADate,
   sumarDias,
   toISODate,
 } from '../utils/date';
 
 const HORAS = Array.from({ length: 24 }, (_, h) => h);
+const DIAS_HEADER = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
+
+function getMesGrid(year: number, month: number): Date[][] {
+  const first = new Date(year, month, 1);
+  let startOff = (first.getDay() + 6) % 7;
+  const start = new Date(year, month, 1 - startOff);
+  const weeks: Date[][] = [];
+  let d = new Date(start);
+  for (let w = 0; w < 6; w++) {
+    const week: Date[] = [];
+    for (let i = 0; i < 7; i++) {
+      week.push(new Date(d));
+      d.setDate(d.getDate() + 1);
+    }
+    weeks.push(week);
+    if (weeks.length >= 5 && week[6].getMonth() !== month) break;
+  }
+  return weeks;
+}
 
 export function Calendar() {
   const { state, dispatch, showToast, calModo, setCalModo, calFecha, setCalFecha, eventosDelDia, abrirDetalle } = useApp();
   const { hourFormat } = state.ajustes;
+  const hoy = hoyISO();
+  const horaActual = new Date().getHours();
+  const minutoActual = new Date().getMinutes();
 
   const dias = useMemo(() => {
     if (calModo === 'dia') return [new Date(calFecha)];
+    if (calModo === 'mes') return [];
     const lunes = inicioDeSemana(calFecha);
     return Array.from({ length: 7 }, (_, i) => sumarDias(lunes, i));
   }, [calFecha, calModo]);
 
-  const subtitulo =
-    calModo === 'dia'
-      ? fechaLarga(calFecha)
-      : `Semana del ${dias[0].getDate()} de ${MESES[dias[0].getMonth()]} al ${dias[6].getDate()} de ${MESES[dias[6].getMonth()]}`;
+  const mesGrid = useMemo(
+    () => calModo === 'mes' ? getMesGrid(calFecha.getFullYear(), calFecha.getMonth()) : [],
+    [calFecha, calModo],
+  );
 
-  const hoy = hoyISO();
-  const horaActual = new Date().getHours();
-  const total = dias.reduce((a, d) => a + eventosDelDia(toISODate(d)).length, 0);
-
-  const calISO = calModo === 'dia' ? toISODate(calFecha) : '';
-  const fechaCorta = calFecha.toLocaleDateString('es', { day: 'numeric', month: 'short' });
+  const tituloHeader = useMemo(() => {
+    if (calModo === 'mes') {
+      return `${MESES[calFecha.getMonth()].charAt(0).toUpperCase() + MESES[calFecha.getMonth()].slice(1)} ${calFecha.getFullYear()}`;
+    }
+    if (calModo === 'dia') {
+      const d = calFecha;
+      return `${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
+    }
+    const lunes = dias[0];
+    const dom = dias[6];
+    if (lunes.getMonth() === dom.getMonth()) {
+      return `${lunes.getDate()} – ${dom.getDate()} de ${MESES[lunes.getMonth()]} de ${lunes.getFullYear()}`;
+    }
+    return `${lunes.getDate()} de ${MESES[lunes.getMonth()].slice(0, 3)} – ${dom.getDate()} de ${MESES[dom.getMonth()].slice(0, 3)} de ${dom.getFullYear()}`;
+  }, [calFecha, calModo, dias]);
 
   const sinHorario = useMemo(
     () =>
@@ -51,10 +83,10 @@ export function Calendar() {
     [state.tareas],
   );
 
-  const [panelAbierto, setPanelAbierto] = useState(true);
+  const [sugOpen, setSugOpen] = useState(false);
 
   const agregarAlCal = (id: string) => {
-    const target = calModo === 'dia' ? calISO : hoy;
+    const target = calModo === 'dia' ? toISODate(calFecha) : hoy;
     const now = new Date();
     let nextHour = now.getHours() + 1;
     if (nextHour > 22) nextHour = 9;
@@ -65,160 +97,230 @@ export function Calendar() {
   };
 
   const mover = (signo: number) => {
-    setCalFecha(sumarDias(calFecha, signo * (calModo === 'dia' ? 1 : 7)));
+    if (calModo === 'mes') {
+      const d = new Date(calFecha);
+      d.setMonth(d.getMonth() + signo);
+      setCalFecha(d);
+    } else {
+      setCalFecha(sumarDias(calFecha, signo * (calModo === 'dia' ? 1 : 7)));
+    }
   };
 
-  return (
-    <section className="view active" id="viewCalendar">
-      <header className="main-header">
-        <div>
-          <h1>Calendario</h1>
-          <p className="subtitle">{subtitulo}</p>
-        </div>
-        <div className="header-actions">
-          <div className="seg">
-            <button
-              type="button"
-              className={`seg-btn${calModo === 'dia' ? ' active' : ''}`}
-              onClick={() => setCalModo('dia')}
-            >
-              Día
-            </button>
-            <button
-              type="button"
-              className={`seg-btn${calModo === 'semana' ? ' active' : ''}`}
-              onClick={() => setCalModo('semana')}
-            >
-              Semana
-            </button>
-          </div>
-          <button type="button" className="icon-btn" onClick={() => mover(-1)} aria-label="Anterior">
-            ‹
-          </button>
-          <button type="button" className="icon-btn" onClick={() => setCalFecha(new Date())}>
-            Hoy
-          </button>
-          <button type="button" className="icon-btn" onClick={() => mover(1)} aria-label="Siguiente">
-            ›
-          </button>
-        </div>
-      </header>
+  const irHoy = () => setCalFecha(new Date());
 
-      {sinHorario.length > 0 && (
-        <div className="cal-suggestions">
-          <button
-            type="button"
-            className="cal-sug-toggle"
-            onClick={() => setPanelAbierto((v) => !v)}
-          >
-            <span>📋 Tareas sin horario ({sinHorario.length})</span>
-            <span className="cal-sug-arrow">{panelAbierto ? '▾' : '▸'}</span>
+  return (
+    <section className="view active gcal" id="viewCalendar">
+      {/* ===== TOOLBAR (Google Calendar style) ===== */}
+      <div className="gcal-toolbar">
+        <div className="gcal-toolbar-left">
+          <button type="button" className="gcal-today-btn" onClick={irHoy}>Hoy</button>
+          <button type="button" className="gcal-nav-btn" onClick={() => mover(-1)} aria-label="Anterior">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
-          {panelAbierto && (
-            <div className="cal-sug-list">
-              {sinHorario.map((t) => (
-                <div key={t.id} className="cal-sug-card">
-                  <div className="cal-sug-info">
-                    <span className="cal-sug-name">{t.titulo}</span>
-                    <span className="cal-sug-meta">
-                      {t.estPomos} 🍅{t.quadrant !== 'Q2' ? ` · ${t.quadrant}` : ''}
-                      {t.importante ? ' · ⭐' : ''}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className="cal-sug-add"
-                    onClick={() => agregarAlCal(t.id)}
-                  >
-                    + {calModo === 'dia' ? fechaCorta : 'Hoy'}
-                  </button>
-                </div>
-              ))}
-            </div>
+          <button type="button" className="gcal-nav-btn" onClick={() => mover(1)} aria-label="Siguiente">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+          <h2 className="gcal-title">{tituloHeader}</h2>
+        </div>
+        <div className="gcal-toolbar-right">
+          {sinHorario.length > 0 && (
+            <button type="button" className="gcal-sug-btn" onClick={() => setSugOpen((v) => !v)} title="Tareas sin horario">
+              📋 {sinHorario.length}
+            </button>
           )}
+          <div className="gcal-mode-tabs">
+            {(['dia', 'semana', 'mes'] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                className={`gcal-mode-tab${calModo === m ? ' active' : ''}`}
+                onClick={() => setCalModo(m)}
+              >
+                {m === 'dia' ? 'Día' : m === 'semana' ? 'Semana' : 'Mes'}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ===== SUGGESTIONS DROPDOWN ===== */}
+      {sugOpen && sinHorario.length > 0 && (
+        <div className="gcal-sug-dropdown">
+          <div className="gcal-sug-header">
+            <span>Tareas sin horario</span>
+            <button type="button" className="gcal-sug-close" onClick={() => setSugOpen(false)}>✕</button>
+          </div>
+          <div className="gcal-sug-list">
+            {sinHorario.map((t) => (
+              <div key={t.id} className="gcal-sug-item" onClick={() => abrirDetalle(t.id)}>
+                <div className="gcal-sug-dot" />
+                <div className="gcal-sug-info">
+                  <span className="gcal-sug-name">{t.titulo}</span>
+                  <span className="gcal-sug-meta">
+                    {t.estPomos} 🍅{t.quadrant !== 'Q2' ? ` · ${t.quadrant}` : ''}
+                    {t.importante ? ' · ★' : ''}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="gcal-sug-add"
+                  onClick={(e) => { e.stopPropagation(); agregarAlCal(t.id); }}
+                  title="Agregar al calendario"
+                >
+                  +
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      <div className="calendar-wrap">
-        <div
-          className="cal-grid"
-          style={{ gridTemplateColumns: `70px repeat(${dias.length}, 1fr)` }}
-        >
-          <div className="cal-cell-head" />
-          {dias.map((d) => (
-            <div
-              key={`head-${toISODate(d)}`}
-              className={`cal-cell-head${toISODate(d) === hoy ? ' today' : ''}`}
-            >
-              {DIAS_C[d.getDay()]} {d.getDate()}
-            </div>
-          ))}
-
-          {HORAS.map((h) => (
-            <ReglaHora
-              key={`fila-${h}`}
-              hora={h}
-              dias={dias}
-              hoy={hoy}
-              horaActual={horaActual}
-              hourFormat={hourFormat}
-              eventosDelDia={eventosDelDia}
-              onAbrir={abrirDetalle}
-            />
-          ))}
+      {/* ===== MONTH VIEW ===== */}
+      {calModo === 'mes' && (
+        <div className="gcal-month-wrap">
+          <div className="gcal-month-grid">
+            {DIAS_HEADER.map((d) => (
+              <div key={d} className="gcal-month-dayname">{d}</div>
+            ))}
+            {mesGrid.flat().map((d) => {
+              const iso = toISODate(d);
+              const isToday = iso === hoy;
+              const isCurrentMonth = d.getMonth() === calFecha.getMonth();
+              const evts = state.tareas.filter((t) => t.fecha === iso && !t.hecha).slice(0, 3);
+              const allEvts = state.tareas.filter((t) => t.fecha === iso);
+              const overflow = allEvts.length > 3 ? allEvts.length - 3 : 0;
+              return (
+                <div
+                  key={iso}
+                  className={`gcal-month-cell${!isCurrentMonth ? ' other' : ''}${isToday ? ' today' : ''}`}
+                  onClick={() => { setCalFecha(isoADate(iso)); setCalModo('dia'); }}
+                >
+                  <span className={`gcal-month-num${isToday ? ' today-circle' : ''}`}>
+                    {d.getDate()}
+                  </span>
+                  <div className="gcal-month-events">
+                    {evts.map((t) => (
+                      <div
+                        key={t.id}
+                        className={`gcal-month-ev${t.inicio ? ' timed' : ''}`}
+                        onClick={(e) => { e.stopPropagation(); abrirDetalle(t.id); }}
+                        title={t.titulo}
+                      >
+                        {t.inicio && <span className="gcal-month-ev-dot" />}
+                        <span className="gcal-month-ev-text">
+                          {t.inicio ? fmtHora(t.inicio, hourFormat) + ' ' : ''}{t.titulo}
+                        </span>
+                      </div>
+                    ))}
+                    {overflow > 0 && <div className="gcal-month-more">+{overflow} más</div>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
+      )}
 
-        <p className="cal-legend">
-          {total} actividad(es) registrada(s) automáticamente en este periodo. Toda tarea con fecha
-          y hora aparece aquí sin pasos extra.
-        </p>
-      </div>
+      {/* ===== DAY / WEEK VIEW ===== */}
+      {calModo !== 'mes' && (
+        <div className="gcal-time-wrap">
+          <div className="gcal-time-grid" style={{ gridTemplateColumns: `56px repeat(${dias.length}, 1fr)` }}>
+            {/* Header row */}
+            <div className="gcal-time-corner" />
+            {dias.map((d) => {
+              const iso = toISODate(d);
+              const isToday = iso === hoy;
+              return (
+                <div key={`h-${iso}`} className={`gcal-time-head${isToday ? ' today' : ''}`}>
+                  <span className="gcal-time-head-day">{DIAS_C[d.getDay()].toUpperCase()}</span>
+                  <span className={`gcal-time-head-num${isToday ? ' today-circle' : ''}`}>
+                    {d.getDate()}
+                  </span>
+                </div>
+              );
+            })}
+
+            {/* Time rows */}
+            {HORAS.map((h) => (
+              <TimeRow
+                key={h}
+                hora={h}
+                dias={dias}
+                hoy={hoy}
+                horaActual={horaActual}
+                minutoActual={minutoActual}
+                hourFormat={hourFormat}
+                eventosDelDia={eventosDelDia}
+                onAbrir={abrirDetalle}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </section>
   );
 }
 
-interface ReglaProps {
+interface TimeRowProps {
   hora: number;
   dias: Date[];
   hoy: string;
   horaActual: number;
+  minutoActual: number;
   hourFormat: HourFormat;
   eventosDelDia: (iso: string) => Task[];
   onAbrir: (id: string) => void;
 }
 
-function ReglaHora({ hora, dias, hoy, horaActual, hourFormat, eventosDelDia, onAbrir }: ReglaProps) {
+function TimeRow({ hora, dias, hoy, horaActual, minutoActual, hourFormat, eventosDelDia, onAbrir }: TimeRowProps) {
   return (
     <>
-      <div className="cal-hour">{fmtHoraNum(hora, hourFormat)}</div>
+      <div className="gcal-time-label">
+        {hora > 0 && <span>{fmtHoraNum(hora, hourFormat)}</span>}
+      </div>
       {dias.map((d) => {
         const iso = toISODate(d);
-        const ahora = iso === hoy && hora === horaActual;
+        const isToday = iso === hoy;
+        const showLine = isToday && hora === horaActual;
         const evs = eventosDelDia(iso).filter(
           (t) => parseInt(t.inicio.split(':')[0], 10) === hora,
         );
         return (
-          <div key={`${iso}-${hora}`} className={`cal-slot${ahora ? ' now' : ''}`}>
-            {evs.map((t) => (
+          <div key={`${iso}-${hora}`} className={`gcal-time-slot${isToday ? ' today-col' : ''}`}>
+            {showLine && (
               <div
-                key={t.id}
-                className={`cal-event${t.hecha ? ' done' : ''}`}
-                title={t.titulo}
-                role="button"
-                tabIndex={0}
-                onClick={() => onAbrir(t.id)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') onAbrir(t.id);
-                }}
+                className="gcal-now-line"
+                style={{ top: `${(minutoActual / 60) * 100}%` }}
               >
-                {t.titulo}
-                <small>
-                  {fmtHora(t.inicio, hourFormat)}
-                  {t.fin ? ` - ${fmtHora(t.fin, hourFormat)}` : ''} · {t.sesiones.length}/
-                  {t.estPomos} 🍅
-                </small>
+                <div className="gcal-now-dot" />
               </div>
-            ))}
+            )}
+            {evs.map((t) => {
+              const startMin = parseInt((t.inicio.split(':')[1] || '0'), 10);
+              const endH = t.fin ? parseInt(t.fin.split(':')[0], 10) : hora + 1;
+              const endMin = t.fin ? parseInt((t.fin.split(':')[1] || '0'), 10) : 0;
+              const durationMin = (endH - hora) * 60 + endMin - startMin;
+              const topPct = (startMin / 60) * 100;
+              const heightPct = Math.max((durationMin / 60) * 100, 22);
+              return (
+                <div
+                  key={t.id}
+                  className={`gcal-event${t.hecha ? ' done' : ''}`}
+                  style={{ top: `${topPct}%`, height: `${heightPct}%`, minHeight: '22px' }}
+                  title={t.titulo}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onAbrir(t.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') onAbrir(t.id); }}
+                >
+                  <span className="gcal-event-title">{t.titulo}</span>
+                  <span className="gcal-event-time">
+                    {fmtHora(t.inicio, hourFormat)}
+                    {t.fin ? ` – ${fmtHora(t.fin, hourFormat)}` : ''}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         );
       })}

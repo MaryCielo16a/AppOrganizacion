@@ -130,7 +130,7 @@ export type BuiltinView =
 /** Vista activa: una de las integradas o `lista:<id>` para una lista propia. */
 export type ViewId = BuiltinView | `lista:${string}`;
 
-export type CalendarMode = 'dia' | 'semana';
+export type CalendarMode = 'dia' | 'semana' | 'mes';
 
 /** Datos con los que se crea una tarea nueva. */
 export interface NewTaskInput {
