@@ -38,6 +38,7 @@ export type Action =
   | { type: 'UPDATE_GOAL'; id: string; patch: Partial<Goal> }
   | { type: 'DELETE_GOAL'; id: string }
   | { type: 'REORDER_TASK'; dragId: string; refId: string; position: 'before' | 'after' }
+  | { type: 'RESET_MI_DIA' }
   | { type: 'SEED_EXAMPLES' }
   | { type: 'LOAD_CLOUD'; state: PersistedState };
 
@@ -201,6 +202,12 @@ export function reducer(state: PersistedState, action: Action): PersistedState {
       tareas.splice(refIdx, 0, dragged);
       return { ...state, tareas };
     }
+
+    case 'RESET_MI_DIA':
+      return {
+        ...state,
+        tareas: state.tareas.map((t) => (t.miDia && !t.hecha ? { ...t, miDia: false } : t)),
+      };
 
     case 'LOAD_CLOUD':
       return action.state;
