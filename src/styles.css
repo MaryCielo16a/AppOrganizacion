@@ -87,6 +87,14 @@ input,select{font-family:inherit}
 .custom-lists-title{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);padding:0 18px 6px}
 #customLists{flex:1;overflow-y:auto}
 
+.install-app-box{padding:8px 12px}
+.install-app-btn{
+  width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px;
+  border-radius:8px;font-size:13px;font-weight:600;
+  background:var(--accent);color:#fff;transition:background .2s;
+}
+.install-app-btn:hover{background:var(--accent-dark)}
+
 .sidebar-footer{
   display:flex;align-items:center;gap:6px;border-top:1px solid var(--line);
   padding:10px 12px;margin-top:auto;

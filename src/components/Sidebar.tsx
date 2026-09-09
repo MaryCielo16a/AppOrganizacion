@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useApp } from '../store/AppContext';
 import { useAuth } from '../store/AuthContext';
 import { hoyISO } from '../utils/date';
@@ -54,6 +55,19 @@ export function Sidebar() {
       default:
         return 0;
     }
+  };
+
+  const [canInstall, setCanInstall] = useState(false);
+  useEffect(() => {
+    const check = () => setCanInstall(!!(window as any).__pwaCanInstall?.());
+    check();
+    window.addEventListener('pwa-install-available', check);
+    return () => window.removeEventListener('pwa-install-available', check);
+  }, []);
+
+  const handleInstall = async () => {
+    const accepted = await (window as any).__pwaInstall?.();
+    if (accepted) setCanInstall(false);
   };
 
   const listasPropias = state.listas.filter((l) => !l.fija);
@@ -192,6 +206,14 @@ export function Sidebar() {
           })
         )}
       </nav>
+
+      {canInstall && (
+        <div className="install-app-box">
+          <button type="button" className="install-app-btn" onClick={handleInstall}>
+            <span className="ico">📲</span> Instalar app
+          </button>
+        </div>
+      )}
 
       <div className="sidebar-footer">
         <button type="button" className="new-list-btn" onClick={nuevaLista}>

@@ -21,3 +21,26 @@ createRoot(contenedor).render(
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   navigator.serviceWorker.register('./sw.js');
 }
+
+// PWA install prompt
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): void;
+  userChoice: Promise<{ outcome: string }>;
+}
+
+let deferredPrompt: BeforeInstallPromptEvent | null = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e as BeforeInstallPromptEvent;
+  window.dispatchEvent(new Event('pwa-install-available'));
+});
+
+(window as unknown as Record<string, unknown>).__pwaInstall = async () => {
+  if (!deferredPrompt) return false;
+  deferredPrompt.prompt();
+  const result = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  return result.outcome === 'accepted';
+};
+
+(window as unknown as Record<string, unknown>).__pwaCanInstall = () => deferredPrompt !== null;
