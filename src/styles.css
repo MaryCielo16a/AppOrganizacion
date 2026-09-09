@@ -416,6 +416,8 @@ body.light .gcal-time-slot.today-col{background:rgba(var(--accent-rgb,186,78,120
   transition:filter .12s;
 }
 .gcal-event:hover{filter:brightness(1.12);z-index:2}
+.gcal-event[draggable]{cursor:grab}
+.gcal-event[draggable]:active{cursor:grabbing;opacity:.6}
 .gcal-event.done{background:var(--panel-2);color:var(--text-dim);text-decoration:line-through;border-left-color:var(--line)}
 .gcal-event-title{display:block;font-weight:600;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gcal-event-time{display:block;font-size:10px;opacity:.85}

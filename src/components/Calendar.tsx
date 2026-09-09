@@ -85,7 +85,7 @@ export function Calendar() {
           if (a.quadrant < b.quadrant) return -1;
           if (a.quadrant > b.quadrant) return 1;
           return 0;
-        })
+        }),
     [state.tareas],
   );
 
@@ -155,9 +155,21 @@ export function Calendar() {
     if (!taskId) return;
     const task = state.tareas.find((t) => t.id === taskId);
     if (!task) return;
+    // Preserve original duration if task already had start/end times
+    let durMin = 60;
+    if (task.inicio && task.fin) {
+      const oldStartH = parseInt(task.inicio.split(':')[0], 10);
+      const oldStartM = parseInt(task.inicio.split(':')[1] || '0', 10);
+      const oldEndH = parseInt(task.fin.split(':')[0], 10);
+      const oldEndM = parseInt(task.fin.split(':')[1] || '0', 10);
+      durMin = (oldEndH - oldStartH) * 60 + (oldEndM - oldStartM);
+      if (durMin <= 0) durMin = 60;
+    }
     const inicio = `${String(hora).padStart(2, '0')}:00`;
-    const finH = Math.min(hora + 1, 23);
-    const fin = `${String(finH).padStart(2, '0')}:00`;
+    const endTotal = hora * 60 + durMin;
+    const finH = Math.min(Math.floor(endTotal / 60), 23);
+    const finM = endTotal >= 24 * 60 ? 59 : endTotal % 60;
+    const fin = `${String(finH).padStart(2, '0')}:${String(finM).padStart(2, '0')}`;
     dispatch({
       type: 'UPDATE_TASK',
       id: taskId,
@@ -320,6 +332,7 @@ export function Calendar() {
                   eventosDelDia={eventosDelDia}
                   onAbrir={abrirDetalle}
                   onSlotClick={openQuickAdd}
+                  onEventDragStart={handleDragStart}
                   dragOverSlot={dragOverSlot}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
@@ -372,13 +385,14 @@ interface TimeRowProps {
   eventosDelDia: (iso: string) => Task[];
   onAbrir: (id: string) => void;
   onSlotClick: (fecha: string, hora: number, e: React.MouseEvent) => void;
+  onEventDragStart: (e: React.DragEvent, taskId: string) => void;
   dragOverSlot: string | null;
   onDragOver: (e: React.DragEvent, slotKey: string) => void;
   onDragLeave: () => void;
   onDrop: (e: React.DragEvent, fecha: string, hora: number) => void;
 }
 
-function TimeRow({ hora, dias, hoy, horaActual, minutoActual, hourFormat, eventosDelDia, onAbrir, onSlotClick, dragOverSlot, onDragOver, onDragLeave, onDrop }: TimeRowProps) {
+function TimeRow({ hora, dias, hoy, horaActual, minutoActual, hourFormat, eventosDelDia, onAbrir, onSlotClick, onEventDragStart, dragOverSlot, onDragOver, onDragLeave, onDrop }: TimeRowProps) {
   return (
     <>
       <div className="gcal-time-label">
@@ -428,6 +442,8 @@ function TimeRow({ hora, dias, hoy, horaActual, minutoActual, hourFormat, evento
                   title={t.titulo}
                   role="button"
                   tabIndex={0}
+                  draggable
+                  onDragStart={(e) => { e.stopPropagation(); onEventDragStart(e, t.id); }}
                   onClick={() => onAbrir(t.id)}
                   onKeyDown={(e) => { if (e.key === 'Enter') onAbrir(t.id); }}
                 >
