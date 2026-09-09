@@ -130,7 +130,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       );
     }
 
-    if (vista === 'miDia') lista = lista.filter((t) => t.miDia);
+    if (vista === 'miDia') {
+      lista = lista.filter((t) => t.miDia);
+      lista.sort((a, b) => {
+        const aHasTime = a.inicio ? 0 : 1;
+        const bHasTime = b.inicio ? 0 : 1;
+        if (aHasTime !== bHasTime) return aHasTime - bHasTime;
+        if (a.inicio && b.inicio) return a.inicio.localeCompare(b.inicio);
+        return 0;
+      });
+    }
     else if (vista === 'importante') lista = lista.filter((t) => t.importante);
     else if (vista === 'completadas') lista = lista.filter((t) => t.hecha);
     else if (vista === 'asignadas') lista = lista.filter((t) => t.asignada);
