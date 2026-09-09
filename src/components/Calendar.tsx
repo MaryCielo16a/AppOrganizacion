@@ -86,7 +86,6 @@ export function Calendar() {
           if (a.quadrant > b.quadrant) return 1;
           return 0;
         })
-        .slice(0, 20),
     [state.tareas],
   );
 
