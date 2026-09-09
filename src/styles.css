@@ -276,6 +276,42 @@ body.light .gcal-sug-dropdown{box-shadow:0 8px 24px rgba(0,0,0,.12)}
 }
 .gcal-sug-add:hover{background:var(--accent);color:#fff}
 
+/* -- Quick-add popup -- */
+.gcal-quick-overlay{
+  position:absolute;inset:0;z-index:29;
+}
+.gcal-quick-popup{
+  position:absolute;z-index:30;width:270px;
+  background:var(--bg-2);border:1px solid var(--line);border-radius:10px;
+  box-shadow:0 8px 24px rgba(0,0,0,.4);padding:14px;
+  display:flex;flex-direction:column;gap:10px;
+}
+body.light .gcal-quick-popup{box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.gcal-quick-input{
+  width:100%;padding:10px 12px;border:none;border-bottom:2px solid var(--accent);
+  background:transparent;color:var(--text);font-size:15px;font-weight:500;
+  outline:none;
+}
+.gcal-quick-input::placeholder{color:var(--text-dim);font-weight:400}
+.gcal-quick-info{
+  display:flex;gap:14px;font-size:12px;color:var(--text-dim);
+}
+.gcal-quick-actions{display:flex;gap:8px;justify-content:flex-end}
+.gcal-quick-save{
+  padding:7px 18px;border-radius:6px;font-size:13px;font-weight:600;
+  background:var(--accent);color:#fff;transition:background .15s;
+}
+.gcal-quick-save:hover{background:var(--accent-dark)}
+.gcal-quick-cancel{
+  padding:7px 14px;border-radius:6px;font-size:13px;
+  color:var(--text-dim);transition:background .15s;
+}
+.gcal-quick-cancel:hover{background:var(--panel-2)}
+
+/* -- Time slot clickable -- */
+.gcal-time-slot{cursor:pointer}
+.gcal-time-slot:hover{background:rgba(var(--accent-rgb,186,78,120),.06)}
+
 /* -- Month view -- */
 .gcal-month-wrap{flex:1;overflow-y:auto;padding:0}
 .gcal-month-grid{

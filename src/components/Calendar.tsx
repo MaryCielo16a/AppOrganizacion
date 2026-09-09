@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useApp } from '../store/AppContext';
 import type { HourFormat, Task } from '../types';
 import {
@@ -18,10 +18,10 @@ const DIAS_HEADER = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
 
 function getMesGrid(year: number, month: number): Date[][] {
   const first = new Date(year, month, 1);
-  let startOff = (first.getDay() + 6) % 7;
+  const startOff = (first.getDay() + 6) % 7;
   const start = new Date(year, month, 1 - startOff);
   const weeks: Date[][] = [];
-  let d = new Date(start);
+  const d = new Date(start);
   for (let w = 0; w < 6; w++) {
     const week: Date[] = [];
     for (let i = 0; i < 7; i++) {
@@ -32,6 +32,13 @@ function getMesGrid(year: number, month: number): Date[][] {
     if (weeks.length >= 5 && week[6].getMonth() !== month) break;
   }
   return weeks;
+}
+
+interface QuickAdd {
+  fecha: string;
+  hora: number;
+  x: number;
+  y: number;
 }
 
 export function Calendar() {
@@ -85,6 +92,47 @@ export function Calendar() {
 
   const [sugOpen, setSugOpen] = useState(false);
 
+  // Quick-add state
+  const [quickAdd, setQuickAdd] = useState<QuickAdd | null>(null);
+  const [quickTitle, setQuickTitle] = useState('');
+  const quickInputRef = useRef<HTMLInputElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  const openQuickAdd = useCallback((fecha: string, hora: number, e: React.MouseEvent) => {
+    const rect = sectionRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    let x = e.clientX - rect.left;
+    let y = e.clientY - rect.top;
+    // Keep popup within bounds
+    if (x + 280 > rect.width) x = rect.width - 290;
+    if (x < 10) x = 10;
+    if (y + 180 > rect.height) y = y - 180;
+    setQuickAdd({ fecha, hora, x, y });
+    setQuickTitle('');
+    setTimeout(() => quickInputRef.current?.focus(), 50);
+  }, []);
+
+  const submitQuickAdd = useCallback(() => {
+    if (!quickAdd || !quickTitle.trim()) return;
+    const inicio = `${String(quickAdd.hora).padStart(2, '0')}:00`;
+    const finH = Math.min(quickAdd.hora + 1, 23);
+    const fin = `${String(finH).padStart(2, '0')}:00`;
+    dispatch({
+      type: 'ADD_TASK',
+      input: {
+        titulo: quickTitle.trim(),
+        fecha: quickAdd.fecha,
+        inicio,
+        fin,
+        estPomos: 1,
+        miDia: quickAdd.fecha === hoy,
+      },
+    });
+    showToast(`Tarea creada: ${fmtHora(inicio, hourFormat)} – ${fmtHora(fin, hourFormat)}`);
+    setQuickAdd(null);
+    setQuickTitle('');
+  }, [quickAdd, quickTitle, dispatch, showToast, hourFormat, hoy]);
+
   const agregarAlCal = (id: string) => {
     const target = calModo === 'dia' ? toISODate(calFecha) : hoy;
     const now = new Date();
@@ -109,8 +157,8 @@ export function Calendar() {
   const irHoy = () => setCalFecha(new Date());
 
   return (
-    <section className="view active gcal" id="viewCalendar">
-      {/* ===== TOOLBAR (Google Calendar style) ===== */}
+    <section className="view active gcal" id="viewCalendar" ref={sectionRef}>
+      {/* ===== TOOLBAR ===== */}
       <div className="gcal-toolbar">
         <div className="gcal-toolbar-left">
           <button type="button" className="gcal-today-btn" onClick={irHoy}>Hoy</button>
@@ -173,6 +221,39 @@ export function Calendar() {
             ))}
           </div>
         </div>
+      )}
+
+      {/* ===== QUICK ADD POPUP ===== */}
+      {quickAdd && (
+        <>
+          <div className="gcal-quick-overlay" onClick={() => setQuickAdd(null)} />
+          <div className="gcal-quick-popup" style={{ left: quickAdd.x, top: quickAdd.y }}>
+            <input
+              ref={quickInputRef}
+              type="text"
+              className="gcal-quick-input"
+              placeholder="Nombre de la tarea"
+              value={quickTitle}
+              onChange={(e) => setQuickTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') submitQuickAdd();
+                if (e.key === 'Escape') setQuickAdd(null);
+              }}
+            />
+            <div className="gcal-quick-info">
+              <span>📅 {quickAdd.fecha}</span>
+              <span>🕐 {fmtHoraNum(quickAdd.hora, hourFormat)} – {fmtHoraNum(Math.min(quickAdd.hora + 1, 23), hourFormat)}</span>
+            </div>
+            <div className="gcal-quick-actions">
+              <button type="button" className="gcal-quick-save" onClick={submitQuickAdd}>
+                Guardar
+              </button>
+              <button type="button" className="gcal-quick-cancel" onClick={() => setQuickAdd(null)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       {/* ===== MONTH VIEW ===== */}
@@ -252,6 +333,7 @@ export function Calendar() {
                 hourFormat={hourFormat}
                 eventosDelDia={eventosDelDia}
                 onAbrir={abrirDetalle}
+                onSlotClick={openQuickAdd}
               />
             ))}
           </div>
@@ -270,9 +352,10 @@ interface TimeRowProps {
   hourFormat: HourFormat;
   eventosDelDia: (iso: string) => Task[];
   onAbrir: (id: string) => void;
+  onSlotClick: (fecha: string, hora: number, e: React.MouseEvent) => void;
 }
 
-function TimeRow({ hora, dias, hoy, horaActual, minutoActual, hourFormat, eventosDelDia, onAbrir }: TimeRowProps) {
+function TimeRow({ hora, dias, hoy, horaActual, minutoActual, hourFormat, eventosDelDia, onAbrir, onSlotClick }: TimeRowProps) {
   return (
     <>
       <div className="gcal-time-label">
@@ -286,7 +369,14 @@ function TimeRow({ hora, dias, hoy, horaActual, minutoActual, hourFormat, evento
           (t) => parseInt(t.inicio.split(':')[0], 10) === hora,
         );
         return (
-          <div key={`${iso}-${hora}`} className={`gcal-time-slot${isToday ? ' today-col' : ''}`}>
+          <div
+            key={`${iso}-${hora}`}
+            className={`gcal-time-slot${isToday ? ' today-col' : ''}`}
+            onClick={(e) => {
+              if ((e.target as HTMLElement).closest('.gcal-event')) return;
+              onSlotClick(iso, hora, e);
+            }}
+          >
             {showLine && (
               <div
                 className="gcal-now-line"
