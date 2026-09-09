@@ -84,7 +84,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!cloudLoaded) return;
-    const MI_DIA_KEY = 'organizador.lastMiDiaReset';
+    const MI_DIA_KEY = 'organizador.lastMiDiaReset.v2';
     const hoy = hoyISO();
     try {
       const last = localStorage.getItem(MI_DIA_KEY);
