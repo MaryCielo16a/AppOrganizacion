@@ -2,10 +2,12 @@ import { useEffect, useRef } from 'react';
 import type { Settings, Task } from '../types';
 import { hoyISO } from '../utils/date';
 import { notificar, sonarAlarma } from '../utils/sound';
+import { scheduleBatch, type ScheduledNotif } from '../utils/swNotify';
 
 /**
- * Revisa cada 30 s las tareas del día con horario y dispara
- * una notificación del navegador + toast cuando una tarea empieza o termina.
+ * Revisa las tareas del día con horario y:
+ * 1. Programa notificaciones en el Service Worker (funcionan en segundo plano)
+ * 2. Chequea cada 30 s en primer plano para el toast + sonido
  */
 export function useTaskNotifications(
   tareas: Task[],
@@ -15,6 +17,49 @@ export function useTaskNotifications(
   const notifiedStart = useRef<Set<string>>(new Set());
   const notifiedEnd = useRef<Set<string>>(new Set());
 
+  // Schedule notifications in the SW whenever tasks change
+  useEffect(() => {
+    const hoy = hoyISO();
+    const now = Date.now();
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
+    const day = today.getDate();
+
+    const batch: ScheduledNotif[] = [];
+
+    for (const t of tareas) {
+      if (t.hecha || t.fecha !== hoy || !t.inicio) continue;
+
+      const [sh, sm] = t.inicio.split(':').map(Number);
+      const startMs = new Date(year, month, day, sh, sm).getTime();
+      if (startMs > now) {
+        batch.push({
+          id: `task-start-${t.id}`,
+          title: '\u{1F514} Tarea iniciada',
+          body: `Es hora de: ${t.titulo}`,
+          triggerAt: startMs,
+        });
+      }
+
+      if (t.fin) {
+        const [eh, em] = t.fin.split(':').map(Number);
+        const endMs = new Date(year, month, day, eh, em).getTime();
+        if (endMs > now) {
+          batch.push({
+            id: `task-end-${t.id}`,
+            title: '✅ Tarea finalizada',
+            body: `Terminó el tiempo de: ${t.titulo}`,
+            triggerAt: endMs,
+          });
+        }
+      }
+    }
+
+    scheduleBatch(batch);
+  }, [tareas]);
+
+  // In-app check for toast + sound (only when page is visible)
   useEffect(() => {
     const check = () => {
       const hoy = hoyISO();
@@ -28,8 +73,8 @@ export function useTaskNotifications(
 
         if (t.inicio === nowHHMM && !notifiedStart.current.has(t.id)) {
           notifiedStart.current.add(t.id);
-          notificar('🔔 Tarea iniciada', `Es hora de: ${t.titulo}`);
-          showToast(`🔔 Empieza: ${t.titulo}`);
+          notificar('\u{1F514} Tarea iniciada', `Es hora de: ${t.titulo}`);
+          showToast(`\u{1F514} Empieza: ${t.titulo}`);
           sonarAlarma(ajustes);
         }
 

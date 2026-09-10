@@ -4,6 +4,7 @@ import type { PersistedState, PomodoroMode } from '../types';
 import type { Action } from '../store/reducer';
 import { getAudioContext, iniciarSonidoFoco, notificar, sonarAlarma } from '../utils/sound';
 import type { FocusHandle } from '../utils/sound';
+import { scheduleNotification, cancelNotification } from '../utils/swNotify';
 
 export interface PomodoroApi {
   modo: PomodoroMode;
@@ -51,10 +52,11 @@ export function usePomodoro(
   const pausar = useCallback(() => {
     setCorriendo(false);
     pararFoco();
+    cancelNotification('pomodoro-end');
   }, [pararFoco]);
 
   const arrancar = useCallback(() => {
-    getAudioContext(); // desbloquea el audio con el gesto del usuario
+    getAudioContext();
     if (modoRef.current === 'pomodoro') {
       inicioSesionRef.current = inicioSesionRef.current ?? new Date().toISOString();
       pararFoco();
@@ -78,6 +80,7 @@ export function usePomodoro(
   const terminar = useCallback(() => {
     setCorriendo(false);
     pararFoco();
+    cancelNotification('pomodoro-end');
     const a = stateRef.current.ajustes;
     sonarAlarma(a);
 
@@ -131,6 +134,17 @@ export function usePomodoro(
     }
   }, []);
 
+  // Schedule SW notification when timer starts
+  useEffect(() => {
+    if (!corriendo) return;
+    const label = modoRef.current === 'pomodoro' ? 'Pomodoro completado' : 'Descanso terminado';
+    const body = modoRef.current === 'pomodoro'
+      ? 'Es hora de tomar un descanso.'
+      : 'A por el siguiente pomodoro.';
+    scheduleNotification('pomodoro-end', `\u{1F345} ${label}`, body, Date.now() + restante * 1000);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [corriendo]);
+
   // Tic del temporizador.
   useEffect(() => {
     if (!corriendo) return;
@@ -148,6 +162,21 @@ export function usePomodoro(
     }, 1000);
     return () => window.clearInterval(id);
   }, [corriendo, revisarRecordatorio]);
+
+  // Re-schedule SW notification when leaving the app (keeps it accurate)
+  useEffect(() => {
+    if (!corriendo) return;
+    const onHide = () => {
+      if (!document.hidden) return;
+      const label = modoRef.current === 'pomodoro' ? 'Pomodoro completado' : 'Descanso terminado';
+      const body = modoRef.current === 'pomodoro'
+        ? 'Es hora de tomar un descanso.'
+        : 'A por el siguiente pomodoro.';
+      scheduleNotification('pomodoro-end', `\u{1F345} ${label}`, body, Date.now() + restante * 1000);
+    };
+    document.addEventListener('visibilitychange', onHide);
+    return () => document.removeEventListener('visibilitychange', onHide);
+  }, [corriendo, restante]);
 
   // Si cambian las duraciones en ajustes y el reloj está parado, se refleja al momento.
   // (No incluimos `corriendo` en las dependencias a propósito: pausar no debe reiniciar el bloque.)
