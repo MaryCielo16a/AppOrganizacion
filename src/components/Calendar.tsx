@@ -181,6 +181,7 @@ export function Calendar() {
 
   // Drag state
   const [dragOverSlot, setDragOverSlot] = useState<string | null>(null);
+  const [calSidebarOpen, setCalSidebarOpen] = useState(false);
 
   const openQuickAdd = useCallback((fecha: string, hora: number, e: React.MouseEvent) => {
     const rect = sectionRef.current?.getBoundingClientRect();
@@ -429,7 +430,7 @@ export function Calendar() {
 
           {/* ===== SIDEBAR: Draggable tasks ===== */}
           {tareasPendientes.length > 0 && (
-            <div className="gcal-sidebar">
+            <div className={`gcal-sidebar${calSidebarOpen ? ' mobile-open' : ''}`}>
               <div className="gcal-sidebar-title">Tareas pendientes</div>
               <div className="gcal-sidebar-list">
                 {tareasPendientes.map((t) => (
@@ -453,7 +454,28 @@ export function Calendar() {
                 ))}
               </div>
               <div className="gcal-sidebar-hint">Arrastra una tarea a una hora del calendario</div>
+              <button
+                type="button"
+                className="gcal-sidebar-close-mobile"
+                onClick={() => setCalSidebarOpen(false)}
+                aria-label="Cerrar"
+              >
+                ✕
+              </button>
             </div>
+          )}
+          {tareasPendientes.length > 0 && (
+            <button
+              type="button"
+              className="gcal-sidebar-fab"
+              onClick={() => setCalSidebarOpen(!calSidebarOpen)}
+              aria-label="Tareas pendientes"
+            >
+              📋 {tareasPendientes.length}
+            </button>
+          )}
+          {calSidebarOpen && (
+            <div className="gcal-sidebar-overlay" onClick={() => setCalSidebarOpen(false)} />
           )}
         </div>
       )}
