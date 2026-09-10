@@ -29,6 +29,7 @@ const NAV_HERRAMIENTAS: NavDef[] = [
 
 const NAV_METODO: NavDef[] = [
   { view: 'rutina', icono: '📋', clase: 'rutina', etiqueta: 'Rutina Semanal & Diaria' },
+  { view: 'estadisticas', icono: '📊', clase: 'stats', etiqueta: 'Mi Progreso' },
   { view: 'asistente', icono: '🤖', clase: 'ia', etiqueta: 'Asistente IA Gemini' },
 ];
 

@@ -24,6 +24,7 @@ export const DEFAULT_SETTINGS: Settings = {
   lockEnabled: false,
   lockPin: '',
   lockTimeout: 5,
+  blockedApps: [],
 };
 
 export const DEFAULT_LISTS: TaskListDef[] = [{ id: 'tareas', nombre: 'Tareas', fija: true }];

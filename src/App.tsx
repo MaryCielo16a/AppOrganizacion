@@ -16,6 +16,8 @@ import { SuggestionsPanel } from './components/SuggestionsPanel';
 import { SettingsPanel } from './components/SettingsPanel';
 import { Toast } from './components/Toast';
 import { OnboardingGuide } from './components/OnboardingGuide';
+import { FocusOverlay } from './components/FocusOverlay';
+import { StatsView } from './components/StatsView';
 import { mmss } from './utils/date';
 
 export function App() {
@@ -144,6 +146,8 @@ export function App() {
             <AreasView />
           ) : vista === 'rutina' ? (
             <RoutineView />
+          ) : vista === 'estadisticas' ? (
+            <StatsView />
           ) : vista === 'asistente' ? (
             <AIAssistant />
           ) : (
@@ -160,6 +164,7 @@ export function App() {
           onComplete={clearJustRegistered}
         />
       )}
+      <FocusOverlay />
       <Toast />
     </>
   );

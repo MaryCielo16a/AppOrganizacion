@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { useApp } from '../store/AppContext';
 import { DEFAULT_SETTINGS } from '../store/defaults';
 import { normalizarAjustes } from '../store/reducer';
@@ -336,6 +336,9 @@ export function SettingsPanel() {
           {/* ---- BLOQUEO ---- */}
           <LockSettings draft={draft} setDraft={setDraft} set={set} num={num} showToast={showToast} />
 
+          {/* ---- APPS BLOQUEADAS ---- */}
+          <BlockedAppsSettings draft={draft} setDraft={setDraft} />
+
           <div className="modal-actions">
             <button type="button" className="ghost-btn" onClick={restablecer}>
               Restablecer
@@ -475,6 +478,87 @@ function LockSettings({
             </div>
           </div>
         </>
+      )}
+    </div>
+  );
+}
+
+const SUGGESTED_APPS = ['TikTok', 'Instagram', 'Facebook', 'Twitter / X', 'YouTube', 'Snapchat', 'Reddit', 'WhatsApp'];
+
+function BlockedAppsSettings({
+  draft,
+  setDraft,
+}: {
+  draft: Settings;
+  setDraft: React.Dispatch<React.SetStateAction<Settings>>;
+}) {
+  const [newApp, setNewApp] = useState('');
+
+  const addApp = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    if (draft.blockedApps.some((a) => a.toLowerCase() === trimmed.toLowerCase())) return;
+    setDraft((d) => ({ ...d, blockedApps: [...d.blockedApps, trimmed] }));
+    setNewApp('');
+  };
+
+  const removeApp = (app: string) => {
+    setDraft((d) => ({ ...d, blockedApps: d.blockedApps.filter((a) => a !== app) }));
+  };
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    addApp(newApp);
+  };
+
+  const suggestions = SUGGESTED_APPS.filter(
+    (s) => !draft.blockedApps.some((a) => a.toLowerCase() === s.toLowerCase()),
+  );
+
+  return (
+    <div className="set-group">
+      <div className="set-group-title">📵 MODO ENFOQUE</div>
+      <p className="set-hint">
+        Estas apps se mostrarán como recordatorio durante tus sesiones Pomodoro para que las evites.
+      </p>
+
+      {draft.blockedApps.length > 0 && (
+        <div className="blocked-apps-list">
+          {draft.blockedApps.map((app) => (
+            <div key={app} className="blocked-app-chip">
+              <span>{app}</span>
+              <button type="button" className="blocked-app-remove" onClick={() => removeApp(app)}>
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <form className="blocked-app-add" onSubmit={handleSubmit}>
+        <input
+          type="text"
+          placeholder="Nombre de la app..."
+          value={newApp}
+          onChange={(e) => setNewApp(e.target.value)}
+          className="blocked-app-input"
+        />
+        <button type="submit" className="ghost-btn">
+          Agregar
+        </button>
+      </form>
+
+      {suggestions.length > 0 && (
+        <div className="blocked-app-suggestions">
+          <span className="set-hint">Sugerencias:</span>
+          <div className="blocked-app-suggestion-list">
+            {suggestions.map((s) => (
+              <button key={s} type="button" className="blocked-app-suggestion" onClick={() => addApp(s)}>
+                + {s}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

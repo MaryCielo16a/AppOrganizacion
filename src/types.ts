@@ -107,6 +107,7 @@ export interface Settings {
   lockEnabled: boolean;
   lockPin: string;
   lockTimeout: number;
+  blockedApps: string[];
 }
 
 /** Estado que se guarda en localStorage. */
@@ -134,7 +135,8 @@ export type BuiltinView =
   | 'eisenhower'
   | 'areas'
   | 'rutina'
-  | 'asistente';
+  | 'asistente'
+  | 'estadisticas';
 
 /** Vista activa: una de las integradas o `lista:<id>` para una lista propia. */
 export type ViewId = BuiltinView | `lista:${string}`;

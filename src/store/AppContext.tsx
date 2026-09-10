@@ -16,6 +16,7 @@ import { usePersistentReducer } from '../hooks/useLocalStorage';
 import { usePomodoro } from '../hooks/usePomodoro';
 import type { PomodoroApi } from '../hooks/usePomodoro';
 import { useFirestoreSync } from '../hooks/useFirestoreSync';
+import { useTaskNotifications } from '../hooks/useTaskNotifications';
 import { useAuth } from './AuthContext';
 
 export const TITULOS: Record<string, string> = {
@@ -31,6 +32,7 @@ export const TITULOS: Record<string, string> = {
   areas: 'Áreas y Metas',
   rutina: 'Rutina Semanal y Diaria',
   asistente: 'Asistente IA',
+  estadisticas: 'Mi Progreso',
 };
 
 interface AppContextValue {
@@ -80,14 +82,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useFirestoreSync(user?.uid ?? null, state, dispatch);
 
-  const [vista, setVista] = useState<ViewId>('miDia');
-  const [busqueda, setBusqueda] = useState('');
-  const [ordenAlfabetico, setOrdenAlfabetico] = useState(false);
-  const [detalleId, setDetalleId] = useState<string | null>(null);
-  const [ajustesAbiertos, setAjustesAbiertos] = useState(false);
-  const [sidebarAbierto, setSidebarAbierto] = useState(false);
-  const [calModo, setCalModo] = useState<CalendarMode>('dia');
-  const [calFecha, setCalFecha] = useState<Date>(() => new Date());
   const [toast, setToast] = useState('');
   const toastTimer = useRef<number | null>(null);
 
@@ -96,6 +90,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
     toastTimer.current = window.setTimeout(() => setToast(''), 2800);
   }, []);
+
+  useTaskNotifications(state.tareas, state.ajustes, showToast);
+
+  const [vista, setVista] = useState<ViewId>('miDia');
+  const [busqueda, setBusqueda] = useState('');
+  const [ordenAlfabetico, setOrdenAlfabetico] = useState(false);
+  const [detalleId, setDetalleId] = useState<string | null>(null);
+  const [ajustesAbiertos, setAjustesAbiertos] = useState(false);
+  const [sidebarAbierto, setSidebarAbierto] = useState(false);
+  const [calModo, setCalModo] = useState<CalendarMode>('dia');
+  const [calFecha, setCalFecha] = useState<Date>(() => new Date());
 
   const pomodoro = usePomodoro(state, dispatch, showToast);
 
