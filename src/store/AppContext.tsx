@@ -136,7 +136,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     if (vista === 'miDia') {
-      lista = lista.filter((t) => t.miDia);
+      const hoy = new Date();
+      const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+      lista = lista.filter((t) => t.miDia || (t.fecha === hoyStr && t.inicio));
       lista.sort((a, b) => {
         const aHasTime = a.inicio ? 0 : 1;
         const bHasTime = b.inicio ? 0 : 1;

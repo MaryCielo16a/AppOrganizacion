@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../store/AppContext';
 import type { GoalFocus, GoalHorizon } from '../types';
+import { HabitsSection } from './HabitsSection';
 
 const AREA_COLORS = [
   { id: 'purple', hex: '#7c3aed' },
@@ -157,6 +158,7 @@ export function AreasView() {
                         const total = gTasks.length;
                         const pct = total > 0 ? Math.round((done / total) * 100) : 0;
                         const fi = FOCUS_LABELS[goal.focus];
+                        const hCount = state.habits.filter((h) => h.goalId === goal.id).length;
                         return (
                           <div key={goal.id} className="goal-card">
                             <div className="goal-card-top">
@@ -174,6 +176,7 @@ export function AreasView() {
                               total={total}
                               pct={pct}
                               gTasks={gTasks}
+                              habitCount={hCount}
                               quickTaskTarget={quickTaskTarget}
                               setQuickTaskTarget={setQuickTaskTarget}
                               areaId={area.id}
@@ -197,6 +200,7 @@ export function AreasView() {
                       const total = gTasks.length;
                       const pct = total > 0 ? Math.round((done / total) * 100) : 0;
                       const fi = FOCUS_LABELS[goal.focus];
+                      const hCount = state.habits.filter((h) => h.goalId === goal.id).length;
                       return (
                         <div key={goal.id} className="goal-card">
                           <div className="goal-card-top">
@@ -214,6 +218,7 @@ export function AreasView() {
                             total={total}
                             pct={pct}
                             gTasks={gTasks}
+                            habitCount={hCount}
                             quickTaskTarget={quickTaskTarget}
                             setQuickTaskTarget={setQuickTaskTarget}
                             areaId={area.id}
@@ -232,6 +237,8 @@ export function AreasView() {
           </div>
         )}
       </div>
+
+      <HabitsSection />
 
       {/* Modal: Nueva Área */}
       {areaModal && (
@@ -340,6 +347,7 @@ interface GoalMetaProps {
   total: number;
   pct: number;
   gTasks: { id: string; titulo: string; hecha: boolean; sesiones: { inicio: string }[]; estPomos: number; inicio: string; fin: string }[];
+  habitCount: number;
   quickTaskTarget: { areaId: string; goalId: string } | null;
   setQuickTaskTarget: (v: { areaId: string; goalId: string } | null) => void;
   areaId: string;
@@ -350,7 +358,7 @@ interface GoalMetaProps {
 }
 
 function GoalMeta({
-  goalId, fi, toggleFocus, focus, done, total, pct, gTasks,
+  goalId, fi, toggleFocus, focus, done, total, pct, gTasks, habitCount,
   quickTaskTarget, setQuickTaskTarget, areaId, quickTaskTitle,
   setQuickTaskTitle, confirmarTareaRapida, onDelete,
 }: GoalMetaProps) {
@@ -378,7 +386,7 @@ function GoalMeta({
       </div>
 
       <div className="goal-progress-row">
-        <span className="goal-progress-text">Progreso: {done}/{total} tareas</span>
+        <span className="goal-progress-text">Progreso: {done}/{total} tareas{habitCount > 0 ? ` · ${habitCount} hábito${habitCount > 1 ? 's' : ''}` : ''}</span>
         <span className="goal-progress-pct">{pct}%</span>
       </div>
       <div className="goal-progress-bar">

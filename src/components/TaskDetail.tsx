@@ -14,6 +14,7 @@ export function TaskDetail() {
   const tomates = Math.max(tarea.estPomos, completados);
 
   const subDone = tarea.subtareas.filter((s) => s.hecha).length;
+  const subInProgress = tarea.subtareas.filter((s) => s.enProceso && !s.hecha).length;
   const subTotal = tarea.subtareas.length;
 
   const patch = (p: Partial<Task>) => dispatch({ type: 'UPDATE_TASK', id: tarea.id, patch: p });
@@ -83,12 +84,16 @@ export function TaskDetail() {
                 className="sub-progress-fill"
                 style={{ width: `${subTotal > 0 ? (subDone / subTotal) * 100 : 0}%` }}
               />
+              <div
+                className="sub-progress-wip"
+                style={{ width: `${subTotal > 0 ? (subInProgress / subTotal) * 100 : 0}%` }}
+              />
             </div>
           )}
 
           <ul className="sub-list">
             {tarea.subtareas.map((s) => (
-              <li key={s.id} className={`sub-item${s.hecha ? ' done' : ''}`}>
+              <li key={s.id} className={`sub-item${s.hecha ? ' done' : ''}${s.enProceso ? ' in-progress' : ''}`}>
                 <input
                   type="checkbox"
                   checked={s.hecha}
@@ -101,6 +106,14 @@ export function TaskDetail() {
                   onChange={(e) => dispatch({ type: 'RENAME_SUBTASK', taskId: tarea.id, subtaskId: s.id, titulo: e.target.value })}
                   className={`sub-title${s.hecha ? ' done' : ''}`}
                 />
+                <button
+                  type="button"
+                  className={`sub-progress-btn${s.enProceso ? ' active' : ''}`}
+                  onClick={() => dispatch({ type: 'SET_SUBTASK_PROGRESS', taskId: tarea.id, subtaskId: s.id, enProceso: !s.enProceso })}
+                  title={s.enProceso ? 'Quitar en proceso' : 'Marcar en proceso'}
+                >
+                  {s.enProceso ? '⏳' : '▶'}
+                </button>
                 <button
                   type="button"
                   className="sub-delete"

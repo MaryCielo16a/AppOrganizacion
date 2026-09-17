@@ -3,6 +3,7 @@ import type {
   Goal,
   GoalFocus,
   GoalHorizon,
+  Habit,
   NewTaskInput,
   PersistedState,
   PomodoroSession,
@@ -42,6 +43,10 @@ export type Action =
   | { type: 'TOGGLE_SUBTASK'; taskId: string; subtaskId: string }
   | { type: 'DELETE_SUBTASK'; taskId: string; subtaskId: string }
   | { type: 'RENAME_SUBTASK'; taskId: string; subtaskId: string; titulo: string }
+  | { type: 'SET_SUBTASK_PROGRESS'; taskId: string; subtaskId: string; enProceso: boolean }
+  | { type: 'ADD_HABIT'; titulo: string; goalId: string }
+  | { type: 'DELETE_HABIT'; id: string }
+  | { type: 'TOGGLE_HABIT_DAY'; habitId: string; dia: string }
   | { type: 'REORDER_TASK'; dragId: string; refId: string; position: 'before' | 'after' }
   | { type: 'RESET_MI_DIA' }
   | { type: 'SEED_EXAMPLES' }
@@ -196,7 +201,7 @@ export function reducer(state: PersistedState, action: Action): PersistedState {
       };
 
     case 'ADD_SUBTASK': {
-      const sub: Subtask = { id: uid(), titulo: action.titulo, hecha: false };
+      const sub: Subtask = { id: uid(), titulo: action.titulo, hecha: false, enProceso: false };
       return {
         ...state,
         tareas: state.tareas.map((t) =>
@@ -234,6 +239,44 @@ export function reducer(state: PersistedState, action: Action): PersistedState {
             : t,
         ),
       };
+
+    case 'SET_SUBTASK_PROGRESS':
+      return {
+        ...state,
+        tareas: state.tareas.map((t) =>
+          t.id === action.taskId
+            ? { ...t, subtareas: t.subtareas.map((s) => s.id === action.subtaskId ? { ...s, enProceso: action.enProceso, hecha: action.enProceso ? false : s.hecha } : s) }
+            : t,
+        ),
+      };
+
+    case 'ADD_HABIT': {
+      const habit: Habit = {
+        id: uid(),
+        titulo: action.titulo,
+        goalId: action.goalId,
+        diasCompletados: [],
+        creado: new Date().toISOString(),
+      };
+      return { ...state, habits: [...state.habits, habit] };
+    }
+
+    case 'DELETE_HABIT':
+      return { ...state, habits: state.habits.filter((h) => h.id !== action.id) };
+
+    case 'TOGGLE_HABIT_DAY': {
+      const habits = state.habits.map((h) => {
+        if (h.id !== action.habitId) return h;
+        const has = h.diasCompletados.includes(action.dia);
+        return {
+          ...h,
+          diasCompletados: has
+            ? h.diasCompletados.filter((d) => d !== action.dia)
+            : [...h.diasCompletados, action.dia],
+        };
+      });
+      return { ...state, habits };
+    }
 
     case 'REORDER_TASK': {
       const { dragId, refId, position } = action;
@@ -308,7 +351,9 @@ export function hydrate(guardado: PersistedState): PersistedState {
       quadrant: validQ.has(t?.quadrant) ? t.quadrant : 'Q2',
       areaId: t?.areaId ?? '',
       goalId: t?.goalId ?? '',
-      subtareas: Array.isArray(t?.subtareas) ? t.subtareas : [],
+      subtareas: Array.isArray(t?.subtareas)
+        ? t.subtareas.map((s: any) => ({ ...s, enProceso: s.enProceso ?? false }))
+        : [],
     })),
     listas,
     ajustes: normalizarAjustes({ ...DEFAULT_SETTINGS, ...(guardado.ajustes ?? {}) }),
@@ -320,6 +365,15 @@ export function hydrate(guardado: PersistedState): PersistedState {
           ...g,
           horizon: g.horizon ?? 'anual' as const,
           focus: g.focus ?? 'activo' as const,
+        }))
+      : [],
+    habits: Array.isArray((guardado as any).habits)
+      ? (guardado as any).habits.map((h: any) => ({
+          id: h.id ?? uid(),
+          titulo: h.titulo ?? '',
+          goalId: h.goalId ?? '',
+          diasCompletados: Array.isArray(h.diasCompletados) ? h.diasCompletados : [],
+          creado: h.creado ?? new Date().toISOString(),
         }))
       : [],
   };

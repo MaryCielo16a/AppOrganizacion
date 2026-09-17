@@ -38,6 +38,17 @@ export interface Subtask {
   id: string;
   titulo: string;
   hecha: boolean;
+  enProceso: boolean;
+}
+
+/** Un hábito diario vinculado a una meta. */
+export interface Habit {
+  id: string;
+  titulo: string;
+  goalId: string;
+  /** Días completados como ISO 'YYYY-MM-DD'. */
+  diasCompletados: string[];
+  creado: string;
 }
 
 /** Una tarea del organizador. */
@@ -119,6 +130,7 @@ export interface PersistedState {
   ronda: number;
   areas: Area[];
   goals: Goal[];
+  habits: Habit[];
 }
 
 export type PomodoroMode = 'pomodoro' | 'short' | 'long';

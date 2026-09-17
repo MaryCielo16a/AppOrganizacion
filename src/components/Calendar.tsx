@@ -106,6 +106,10 @@ interface QuickAdd {
 
 export function Calendar() {
   const { state, dispatch, showToast, calModo, setCalModo, calFecha, setCalFecha, eventosDelDia, abrirDetalle } = useApp();
+
+  const handleToggleTask = useCallback((id: string) => {
+    dispatch({ type: 'TOGGLE_TASK', id });
+  }, [dispatch]);
   const { hourFormat } = state.ajustes;
   const hoy = hoyISO();
 
@@ -419,6 +423,7 @@ export function Calendar() {
                   onAbrir={abrirDetalle}
                   onSlotClick={openQuickAdd}
                   onEventDragStart={handleDragStart}
+                  onToggleTask={handleToggleTask}
                   dragOverSlot={dragOverSlot}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
@@ -496,13 +501,14 @@ interface TimeRowProps {
   onAbrir: (id: string) => void;
   onSlotClick: (fecha: string, hora: number, e: React.MouseEvent) => void;
   onEventDragStart: (e: React.DragEvent, taskId: string) => void;
+  onToggleTask: (id: string) => void;
   dragOverSlot: string | null;
   onDragOver: (e: React.DragEvent, slotKey: string) => void;
   onDragLeave: () => void;
   onDrop: (e: React.DragEvent, fecha: string, hora: number) => void;
 }
 
-function TimeRow({ hora, dias, hoy, horaActual, minutoActual, nowMin, hourFormat, eventosDelDia, dayLayouts, onAbrir, onSlotClick, onEventDragStart, dragOverSlot, onDragOver, onDragLeave, onDrop }: TimeRowProps) {
+function TimeRow({ hora, dias, hoy, horaActual, minutoActual, nowMin, hourFormat, eventosDelDia, dayLayouts, onAbrir, onSlotClick, onEventDragStart, onToggleTask, dragOverSlot, onDragOver, onDragLeave, onDrop }: TimeRowProps) {
   return (
     <>
       <div className="gcal-time-label">
@@ -575,6 +581,14 @@ function TimeRow({ hora, dias, hoy, horaActual, minutoActual, nowMin, hourFormat
                   onClick={() => onAbrir(t.id)}
                   onKeyDown={(e) => { if (e.key === 'Enter') onAbrir(t.id); }}
                 >
+                  <input
+                    type="checkbox"
+                    className="gcal-event-check"
+                    checked={t.hecha}
+                    onChange={(e) => { e.stopPropagation(); onToggleTask(t.id); }}
+                    onClick={(e) => e.stopPropagation()}
+                    title={t.hecha ? 'Marcar pendiente' : 'Marcar completada'}
+                  />
                   <span className="gcal-event-title">{t.titulo}</span>
                   <span className="gcal-event-time">
                     {fmtHora(t.inicio, hourFormat)}

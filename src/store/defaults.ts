@@ -44,4 +44,5 @@ export const INITIAL_STATE: PersistedState = {
   ronda: 1,
   areas: DEFAULT_AREAS,
   goals: [],
+  habits: [],
 };
