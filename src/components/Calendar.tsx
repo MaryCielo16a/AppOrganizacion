@@ -12,6 +12,7 @@ import {
   sumarDias,
   toISODate,
 } from '../utils/date';
+import { useTouchDrag } from '../hooks/useTouchDrag';
 
 const HORAS = Array.from({ length: 24 }, (_, h) => h);
 const DIAS_HEADER = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
@@ -266,6 +267,35 @@ export function Calendar() {
     showToast(`${task.titulo} → ${fmtHoraNum(hora, hourFormat)}`);
   }, [state.tareas, dispatch, showToast, hourFormat, hoy]);
 
+  // Touch drag & drop for mobile
+  const handleTouchDrop = useCallback(
+    (taskId: string, fecha: string, hora: number) => {
+      const task = state.tareas.find((t) => t.id === taskId);
+      if (!task) return;
+      let durMin = 60;
+      if (task.inicio && task.fin) {
+        const s = timeToMin(task.inicio);
+        const e = timeToMin(task.fin);
+        if (e > s) durMin = e - s;
+      }
+      const inicio = `${String(hora).padStart(2, '0')}:00`;
+      const endTotal = hora * 60 + durMin;
+      const finH = Math.min(Math.floor(endTotal / 60), 23);
+      const finM = endTotal >= 24 * 60 ? 59 : endTotal % 60;
+      const fin = `${String(finH).padStart(2, '0')}:${String(finM).padStart(2, '0')}`;
+      dispatch({
+        type: 'UPDATE_TASK',
+        id: taskId,
+        patch: { fecha, inicio, fin, miDia: fecha === hoy },
+      });
+      showToast(`${task.titulo} → ${fmtHoraNum(hora, hourFormat)}`);
+    },
+    [state.tareas, dispatch, showToast, hourFormat, hoy],
+  );
+
+  const { touchDrag, touchOverSlot, onTouchStart, onTouchMove, onTouchEnd } =
+    useTouchDrag(handleTouchDrop);
+
   const mover = (signo: number) => {
     if (calModo === 'mes') {
       const d = new Date(calFecha);
@@ -425,9 +455,13 @@ export function Calendar() {
                   onEventDragStart={handleDragStart}
                   onToggleTask={handleToggleTask}
                   dragOverSlot={dragOverSlot}
+                  touchOverSlot={touchOverSlot}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
+                  onTouchStart={onTouchStart}
+                  onTouchMove={onTouchMove}
+                  onTouchEnd={onTouchEnd}
                 />
               ))}
             </div>
@@ -445,6 +479,9 @@ export function Calendar() {
                     draggable
                     onDragStart={(e) => handleDragStart(e, t.id)}
                     onClick={() => abrirDetalle(t.id)}
+                    onTouchStart={(e) => onTouchStart(e, t.id, t.titulo)}
+                    onTouchMove={onTouchMove}
+                    onTouchEnd={onTouchEnd}
                   >
                     <div className="gcal-sidebar-grip">⠿</div>
                     <div className="gcal-sidebar-info">
@@ -459,6 +496,7 @@ export function Calendar() {
                 ))}
               </div>
               <div className="gcal-sidebar-hint">Arrastra una tarea a una hora del calendario</div>
+              <div className="gcal-sidebar-hint gcal-sidebar-hint-touch">Mantén presionado y arrastra al calendario</div>
               <button
                 type="button"
                 className="gcal-sidebar-close-mobile"
@@ -484,6 +522,15 @@ export function Calendar() {
           )}
         </div>
       )}
+      {/* Touch drag ghost */}
+      {touchDrag && (
+        <div
+          className="gcal-touch-ghost"
+          style={{ left: touchDrag.ghostX, top: touchDrag.ghostY }}
+        >
+          {touchDrag.taskTitle}
+        </div>
+      )}
     </section>
   );
 }
@@ -503,12 +550,16 @@ interface TimeRowProps {
   onEventDragStart: (e: React.DragEvent, taskId: string) => void;
   onToggleTask: (id: string) => void;
   dragOverSlot: string | null;
+  touchOverSlot: string | null;
   onDragOver: (e: React.DragEvent, slotKey: string) => void;
   onDragLeave: () => void;
   onDrop: (e: React.DragEvent, fecha: string, hora: number) => void;
+  onTouchStart: (e: React.TouchEvent, taskId: string, taskTitle: string) => void;
+  onTouchMove: (e: React.TouchEvent) => void;
+  onTouchEnd: () => void;
 }
 
-function TimeRow({ hora, dias, hoy, horaActual, minutoActual, nowMin, hourFormat, eventosDelDia, dayLayouts, onAbrir, onSlotClick, onEventDragStart, onToggleTask, dragOverSlot, onDragOver, onDragLeave, onDrop }: TimeRowProps) {
+function TimeRow({ hora, dias, hoy, horaActual, minutoActual, nowMin, hourFormat, eventosDelDia, dayLayouts, onAbrir, onSlotClick, onEventDragStart, onToggleTask, dragOverSlot, touchOverSlot, onDragOver, onDragLeave, onDrop, onTouchStart, onTouchMove, onTouchEnd }: TimeRowProps) {
   return (
     <>
       <div className="gcal-time-label">
@@ -519,7 +570,7 @@ function TimeRow({ hora, dias, hoy, horaActual, minutoActual, nowMin, hourFormat
         const isToday = iso === hoy;
         const showLine = isToday && hora === horaActual;
         const slotKey = `${iso}-${hora}`;
-        const isDragOver = dragOverSlot === slotKey;
+        const isDragOver = dragOverSlot === slotKey || touchOverSlot === slotKey;
         const layout = dayLayouts.get(iso);
         const evs = eventosDelDia(iso).filter(
           (t) => parseInt(t.inicio.split(':')[0], 10) === hora,
@@ -528,6 +579,8 @@ function TimeRow({ hora, dias, hoy, horaActual, minutoActual, nowMin, hourFormat
           <div
             key={slotKey}
             className={`gcal-time-slot${isToday ? ' today-col' : ''}${isDragOver ? ' drag-over' : ''}`}
+            data-slot-fecha={iso}
+            data-slot-hora={hora}
             onClick={(e) => {
               if ((e.target as HTMLElement).closest('.gcal-event')) return;
               onSlotClick(iso, hora, e);
@@ -580,6 +633,9 @@ function TimeRow({ hora, dias, hoy, horaActual, minutoActual, nowMin, hourFormat
                   onDragStart={(e) => { e.stopPropagation(); onEventDragStart(e, t.id); }}
                   onClick={() => onAbrir(t.id)}
                   onKeyDown={(e) => { if (e.key === 'Enter') onAbrir(t.id); }}
+                  onTouchStart={(e) => onTouchStart(e, t.id, t.titulo)}
+                  onTouchMove={onTouchMove}
+                  onTouchEnd={onTouchEnd}
                 >
                   <input
                     type="checkbox"
