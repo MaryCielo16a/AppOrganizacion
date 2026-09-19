@@ -1,23 +1,33 @@
 import { useEffect, useRef } from 'react';
+import {
+  collection,
+  doc,
+  getDocs,
+  writeBatch,
+  Timestamp,
+} from 'firebase/firestore';
 import type { Settings, Task } from '../types';
+import { db } from '../firebase';
 import { hoyISO } from '../utils/date';
 import { notificar, sonarAlarma } from '../utils/sound';
 import { scheduleBatch, type ScheduledNotif } from '../utils/swNotify';
 
 /**
  * Revisa las tareas del día con horario y:
- * 1. Programa notificaciones en el Service Worker (funcionan en segundo plano)
- * 2. Chequea cada 30 s en primer plano para el toast + sonido
+ * 1. Programa notificaciones en el Service Worker (fallback local)
+ * 2. Escribe notificaciones pendientes en Firestore para Cloud Functions + FCM
+ * 3. Chequea cada 30 s en primer plano para el toast + sonido
  */
 export function useTaskNotifications(
   tareas: Task[],
   ajustes: Settings,
   showToast: (msg: string) => void,
+  uid: string | null,
 ) {
   const notifiedStart = useRef<Set<string>>(new Set());
   const notifiedEnd = useRef<Set<string>>(new Set());
 
-  // Schedule notifications in the SW whenever tasks change
+  // Schedule notifications in SW + Firestore whenever tasks change
   useEffect(() => {
     const hoy = hoyISO();
     const now = Date.now();
@@ -57,7 +67,11 @@ export function useTaskNotifications(
     }
 
     scheduleBatch(batch);
-  }, [tareas]);
+
+    if (uid) {
+      void syncPushToFirestore(uid, batch);
+    }
+  }, [tareas, uid]);
 
   // Re-send batch to SW when page becomes visible (mobile resume)
   useEffect(() => {
@@ -69,23 +83,23 @@ export function useTaskNotifications(
       const year = today.getFullYear();
       const month = today.getMonth();
       const day = today.getDate();
-      const batch: ScheduledNotif[] = [];
+      const items: ScheduledNotif[] = [];
       for (const t of tareas) {
         if (t.hecha || t.fecha !== hoy || !t.inicio) continue;
         const [sh, sm] = t.inicio.split(':').map(Number);
         const startMs = new Date(year, month, day, sh, sm).getTime();
         if (startMs > now) {
-          batch.push({ id: `task-start-${t.id}`, title: '\u{1F514} Tarea iniciada', body: `Es hora de: ${t.titulo}`, triggerAt: startMs });
+          items.push({ id: `task-start-${t.id}`, title: '\u{1F514} Tarea iniciada', body: `Es hora de: ${t.titulo}`, triggerAt: startMs });
         }
         if (t.fin) {
           const [eh, em] = t.fin.split(':').map(Number);
           const endMs = new Date(year, month, day, eh, em).getTime();
           if (endMs > now) {
-            batch.push({ id: `task-end-${t.id}`, title: '✅ Tarea finalizada', body: `Terminó el tiempo de: ${t.titulo}`, triggerAt: endMs });
+            items.push({ id: `task-end-${t.id}`, title: '✅ Tarea finalizada', body: `Terminó el tiempo de: ${t.titulo}`, triggerAt: endMs });
           }
         }
       }
-      scheduleBatch(batch);
+      scheduleBatch(items);
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
@@ -136,4 +150,28 @@ export function useTaskNotifications(
     }, msToMidnight);
     return () => window.clearTimeout(timer);
   }, []);
+}
+
+async function syncPushToFirestore(uid: string, pending: ScheduledNotif[]) {
+  try {
+    const col = collection(db, 'usuarios', uid, 'notificaciones_push');
+    const existing = await getDocs(col);
+    const batch = writeBatch(db);
+
+    existing.docs.forEach((d) => batch.delete(d.ref));
+
+    for (const n of pending) {
+      const ref = doc(col, n.id);
+      batch.set(ref, {
+        title: n.title,
+        body: n.body,
+        triggerAt: Timestamp.fromMillis(n.triggerAt),
+        sent: false,
+      });
+    }
+
+    await batch.commit();
+  } catch (err) {
+    console.warn('[push] sync error:', err);
+  }
 }

@@ -18,6 +18,7 @@ import type { PomodoroApi } from '../hooks/usePomodoro';
 import { useFirestoreSync } from '../hooks/useFirestoreSync';
 import { useTaskNotifications } from '../hooks/useTaskNotifications';
 import { useAuth } from './AuthContext';
+import { initFCM } from '../utils/fcm';
 
 export const TITULOS: Record<string, string> = {
   miDia: 'Mi día',
@@ -91,7 +92,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     toastTimer.current = window.setTimeout(() => setToast(''), 2800);
   }, []);
 
-  useTaskNotifications(state.tareas, state.ajustes, showToast);
+  const uid = user?.uid ?? null;
+  useTaskNotifications(state.tareas, state.ajustes, showToast, uid);
+
+  useEffect(() => {
+    if (uid && 'Notification' in window && Notification.permission === 'granted') {
+      void initFCM(uid);
+    }
+  }, [uid]);
 
   const [vista, setVista] = useState<ViewId>('miDia');
   const [busqueda, setBusqueda] = useState('');

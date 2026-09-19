@@ -140,6 +140,35 @@ self.addEventListener('message', (e) => {
   }
 });
 
+// --- FCM Push event ---
+self.addEventListener('push', (e) => {
+  if (!e.data) return;
+  try {
+    const payload = e.data.json();
+    const title = payload.data?.title || payload.notification?.title || 'Recordatorio';
+    const body = payload.data?.body || payload.notification?.body || '';
+    e.waitUntil(
+      self.registration.showNotification(title, {
+        body,
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        vibrate: [200, 100, 200, 100, 200],
+        tag: title,
+        renotify: true,
+      })
+    );
+  } catch {
+    const text = e.data.text();
+    e.waitUntil(
+      self.registration.showNotification('Recordatorio', {
+        body: text,
+        icon: '/icon-192.png',
+        vibrate: [200, 100, 200],
+      })
+    );
+  }
+});
+
 // Click on notification opens the app
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();

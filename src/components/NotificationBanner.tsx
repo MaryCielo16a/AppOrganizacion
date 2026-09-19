@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from '../store/AuthContext';
+import { initFCM } from '../utils/fcm';
 
 const DISMISS_KEY = 'notif-banner-dismissed';
 
 export function NotificationBanner() {
+  const { user } = useAuth();
   const [visible, setVisible] = useState(false);
   const [permState, setPermState] = useState<NotificationPermission | 'unsupported'>('default');
 
@@ -28,9 +31,10 @@ export function NotificationBanner() {
       setVisible(false);
       if (p === 'granted') {
         try { localStorage.setItem(DISMISS_KEY, '1'); } catch { /* ok */ }
+        if (user?.uid) void initFCM(user.uid);
       }
     });
-  }, []);
+  }, [user]);
 
   const cerrar = useCallback(() => {
     setVisible(false);

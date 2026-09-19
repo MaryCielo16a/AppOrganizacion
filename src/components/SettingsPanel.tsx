@@ -1,8 +1,10 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { useApp } from '../store/AppContext';
+import { useAuth } from '../store/AuthContext';
 import { DEFAULT_SETTINGS } from '../store/defaults';
 import { normalizarAjustes } from '../store/reducer';
 import { sonarAlarma } from '../utils/sound';
+import { initFCM } from '../utils/fcm';
 import type {
   AlarmSound,
   FocusSound,
@@ -22,6 +24,7 @@ const TEMAS: { nombre: ThemeName; color: string }[] = [
 
 export function SettingsPanel() {
   const { state, dispatch, setAjustesAbiertos, showToast } = useApp();
+  const { user } = useAuth();
 
   // Borrador local: se confirma con "Aceptar".
   // El panel se monta al abrirse (App lo renderiza condicionalmente), así que
@@ -52,9 +55,10 @@ export function SettingsPanel() {
       showToast('Tu navegador no soporta notificaciones.');
       return;
     }
-    void Notification.requestPermission().then((p) =>
-      showToast(p === 'granted' ? 'Notificaciones activadas' : 'Notificaciones no permitidas'),
-    );
+    void Notification.requestPermission().then((p) => {
+      showToast(p === 'granted' ? 'Notificaciones activadas' : 'Notificaciones no permitidas');
+      if (p === 'granted' && user?.uid) void initFCM(user.uid);
+    });
   };
 
   return (
