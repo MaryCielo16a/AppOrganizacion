@@ -59,9 +59,42 @@ export function useTaskNotifications(
     scheduleBatch(batch);
   }, [tareas]);
 
+  // Re-send batch to SW when page becomes visible (mobile resume)
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      const hoy = hoyISO();
+      const now = Date.now();
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = today.getMonth();
+      const day = today.getDate();
+      const batch: ScheduledNotif[] = [];
+      for (const t of tareas) {
+        if (t.hecha || t.fecha !== hoy || !t.inicio) continue;
+        const [sh, sm] = t.inicio.split(':').map(Number);
+        const startMs = new Date(year, month, day, sh, sm).getTime();
+        if (startMs > now) {
+          batch.push({ id: `task-start-${t.id}`, title: '\u{1F514} Tarea iniciada', body: `Es hora de: ${t.titulo}`, triggerAt: startMs });
+        }
+        if (t.fin) {
+          const [eh, em] = t.fin.split(':').map(Number);
+          const endMs = new Date(year, month, day, eh, em).getTime();
+          if (endMs > now) {
+            batch.push({ id: `task-end-${t.id}`, title: '✅ Tarea finalizada', body: `Terminó el tiempo de: ${t.titulo}`, triggerAt: endMs });
+          }
+        }
+      }
+      scheduleBatch(batch);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [tareas]);
+
   // In-app check for toast + sound (only when page is visible)
   useEffect(() => {
     const check = () => {
+      if (document.visibilityState !== 'visible') return;
       const hoy = hoyISO();
       const now = new Date();
       const nowHHMM =

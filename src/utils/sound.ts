@@ -95,16 +95,21 @@ export function iniciarSonidoFoco(ajustes: Settings): FocusHandle | null {
 export function notificar(titulo: string, cuerpo: string): void {
   try {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      void navigator.serviceWorker.ready.then((reg) =>
-        reg.showNotification(titulo, {
-          body: cuerpo,
-          icon: '/icon-192.png',
-          badge: '/icon-192.png',
-          tag: titulo,
-          renotify: true,
-        } as NotificationOptions),
-      );
+    if ('serviceWorker' in navigator) {
+      void navigator.serviceWorker.ready.then((reg) => {
+        if (reg.active) {
+          reg.showNotification(titulo, {
+            body: cuerpo,
+            icon: '/icon-192.png',
+            badge: '/icon-192.png',
+            tag: titulo,
+            renotify: true,
+            vibrate: [200, 100, 200],
+          } as NotificationOptions);
+        } else {
+          new Notification(titulo, { body: cuerpo });
+        }
+      });
     } else {
       new Notification(titulo, { body: cuerpo });
     }

@@ -1543,6 +1543,30 @@ body.light .eq-task{background:#f7f9fa;border:1px solid var(--line)}
 .habit-add-btn:hover{background:var(--accent-dark)}
 .habit-progress-label{font-size:11px;color:var(--text-dim);margin-top:6px}
 
+/* Notification banner */
+.notif-banner{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 16px;
+  background:var(--accent);color:#fff;
+  font-size:13px;position:relative;z-index:100;
+}
+.notif-banner-icon{font-size:18px;flex-shrink:0}
+.notif-banner-text{flex:1;line-height:1.3}
+.notif-banner-btn{
+  padding:5px 14px;border-radius:6px;
+  background:rgba(255,255,255,.2);color:#fff;
+  border:1px solid rgba(255,255,255,.4);
+  font-size:12px;font-weight:600;cursor:pointer;
+  white-space:nowrap;transition:background .15s;
+}
+.notif-banner-btn:hover{background:rgba(255,255,255,.35)}
+.notif-banner-close{
+  background:none;border:none;color:rgba(255,255,255,.7);
+  font-size:16px;cursor:pointer;padding:4px;line-height:1;
+  flex-shrink:0;
+}
+.notif-banner-close:hover{color:#fff}
+
 /* Responsive */
 @media(max-width:700px){
   .stats-kpis{grid-template-columns:repeat(2,1fr)}

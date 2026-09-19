@@ -1,5 +1,67 @@
 const CACHE_NAME = 'organizador-v3';
 
+// --- IndexedDB helpers for persistent notifications ---
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('notif-store', 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains('scheduled')) {
+        db.createObjectStore('scheduled', { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveAllToDB(notifications) {
+  try {
+    const db = await openDB();
+    const tx = db.transaction('scheduled', 'readwrite');
+    const store = tx.objectStore('scheduled');
+    store.clear();
+    for (const n of notifications) {
+      store.put(n);
+    }
+    await new Promise((res, rej) => {
+      tx.oncomplete = res;
+      tx.onerror = () => rej(tx.error);
+    });
+    db.close();
+  } catch { /* IDB may not be available */ }
+}
+
+async function removeFromDB(id) {
+  try {
+    const db = await openDB();
+    const tx = db.transaction('scheduled', 'readwrite');
+    tx.objectStore('scheduled').delete(id);
+    await new Promise((res, rej) => {
+      tx.oncomplete = res;
+      tx.onerror = () => rej(tx.error);
+    });
+    db.close();
+  } catch { /* ok */ }
+}
+
+async function loadAllFromDB() {
+  try {
+    const db = await openDB();
+    const tx = db.transaction('scheduled', 'readonly');
+    const store = tx.objectStore('scheduled');
+    const req = store.getAll();
+    const result = await new Promise((res, rej) => {
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => rej(req.error);
+    });
+    db.close();
+    return result;
+  } catch {
+    return [];
+  }
+}
+
 // --- Scheduled notifications ---
 const pending = new Map(); // id → timeoutId
 
@@ -7,11 +69,13 @@ function scheduleNotification(id, title, body, triggerAt) {
   cancelNotification(id);
   const delay = triggerAt - Date.now();
   if (delay <= 0) {
+    removeFromDB(id);
     showNotif(title, body);
     return;
   }
   const tid = setTimeout(() => {
     pending.delete(id);
+    removeFromDB(id);
     showNotif(title, body);
   }, delay);
   pending.set(id, tid);
@@ -35,6 +99,19 @@ function showNotif(title, body) {
   });
 }
 
+async function restoreFromDB() {
+  const items = await loadAllFromDB();
+  const now = Date.now();
+  for (const n of items) {
+    if (n.triggerAt <= now) {
+      removeFromDB(n.id);
+      showNotif(n.title, n.body);
+    } else {
+      scheduleNotification(n.id, n.title, n.body, n.triggerAt);
+    }
+  }
+}
+
 self.addEventListener('message', (e) => {
   const msg = e.data;
   if (!msg || !msg.type) return;
@@ -43,18 +120,21 @@ self.addEventListener('message', (e) => {
     scheduleNotification(msg.id, msg.title, msg.body, msg.triggerAt);
   } else if (msg.type === 'CANCEL') {
     cancelNotification(msg.id);
+    removeFromDB(msg.id);
   } else if (msg.type === 'CANCEL_ALL') {
-    for (const [id, tid] of pending) {
+    for (const [, tid] of pending) {
       clearTimeout(tid);
     }
     pending.clear();
+    saveAllToDB([]);
   } else if (msg.type === 'SCHEDULE_BATCH') {
-    // Cancel all existing, then schedule new batch
-    for (const [id, tid] of pending) {
+    for (const [, tid] of pending) {
       clearTimeout(tid);
     }
     pending.clear();
-    for (const n of msg.notifications) {
+    const notifications = msg.notifications || [];
+    saveAllToDB(notifications);
+    for (const n of notifications) {
       scheduleNotification(n.id, n.title, n.body, n.triggerAt);
     }
   }
@@ -82,7 +162,7 @@ self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
+    ).then(() => restoreFromDB())
   );
   self.clients.claim();
 });

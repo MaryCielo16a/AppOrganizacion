@@ -18,6 +18,7 @@ import { Toast } from './components/Toast';
 import { OnboardingGuide } from './components/OnboardingGuide';
 import { FocusOverlay } from './components/FocusOverlay';
 import { StatsView } from './components/StatsView';
+import { NotificationBanner } from './components/NotificationBanner';
 import { mmss } from './utils/date';
 
 export function App() {
@@ -122,6 +123,7 @@ export function App() {
 
   return (
     <>
+      <NotificationBanner />
       <div id="app">
         <button
           type="button"
