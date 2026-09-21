@@ -47,6 +47,7 @@ export type Action =
   | { type: 'ADD_HABIT'; titulo: string; goalId: string }
   | { type: 'DELETE_HABIT'; id: string }
   | { type: 'TOGGLE_HABIT_DAY'; habitId: string; dia: string }
+  | { type: 'REORDER_SUBTASK'; taskId: string; dragId: string; refId: string }
   | { type: 'REORDER_TASK'; dragId: string; refId: string; position: 'before' | 'after' }
   | { type: 'RESET_MI_DIA' }
   | { type: 'SEED_EXAMPLES' }
@@ -249,6 +250,23 @@ export function reducer(state: PersistedState, action: Action): PersistedState {
             : t,
         ),
       };
+
+    case 'REORDER_SUBTASK': {
+      return {
+        ...state,
+        tareas: state.tareas.map((t) => {
+          if (t.id !== action.taskId) return t;
+          const subs = [...t.subtareas];
+          const dragIdx = subs.findIndex((s) => s.id === action.dragId);
+          if (dragIdx === -1) return t;
+          const [dragged] = subs.splice(dragIdx, 1);
+          const refIdx = subs.findIndex((s) => s.id === action.refId);
+          if (refIdx === -1) return t;
+          subs.splice(refIdx, 0, dragged);
+          return { ...t, subtareas: subs };
+        }),
+      };
+    }
 
     case 'ADD_HABIT': {
       const habit: Habit = {
