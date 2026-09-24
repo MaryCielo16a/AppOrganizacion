@@ -18,6 +18,7 @@ import { Toast } from './components/Toast';
 import { OnboardingGuide } from './components/OnboardingGuide';
 import { FocusOverlay } from './components/FocusOverlay';
 import { StatsView } from './components/StatsView';
+import { HabitsView } from './components/HabitsView';
 import { NotificationBanner } from './components/NotificationBanner';
 import { mmss } from './utils/date';
 
@@ -148,6 +149,8 @@ export function App() {
             <AreasView />
           ) : vista === 'rutina' ? (
             <RoutineView />
+          ) : vista === 'habitos' ? (
+            <HabitsView />
           ) : vista === 'estadisticas' ? (
             <StatsView />
           ) : vista === 'asistente' ? (

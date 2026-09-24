@@ -32,6 +32,7 @@ export const TITULOS: Record<string, string> = {
   eisenhower: 'Matriz de Eisenhower',
   areas: 'Áreas y Metas',
   rutina: 'Rutina Semanal y Diaria',
+  habitos: 'Mis Hábitos',
   asistente: 'Asistente IA',
   estadisticas: 'Mi Progreso',
 };

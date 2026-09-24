@@ -134,12 +134,28 @@ export function StatsView() {
     ? Math.round((totalCompletadas / (totalCompletadas + totalPendientes)) * 100)
     : 0;
 
+  // Subtask stats
+  const subStats = useMemo(() => {
+    let totalSubs = 0;
+    let doneSubs = 0;
+    for (const t of tareas) {
+      totalSubs += t.subtareas.length;
+      doneSubs += t.subtareas.filter((s) => s.hecha).length;
+    }
+    return { totalSubs, doneSubs, pct: totalSubs > 0 ? Math.round((doneSubs / totalSubs) * 100) : 0 };
+  }, [tareas]);
+
+  // Planned but overdue tasks
+  const overdue = useMemo(() => {
+    return tareas.filter((t) => !t.hecha && t.fecha && t.fecha < hoy).length;
+  }, [tareas, hoy]);
+
   const streak = useMemo(() => calcStreak(tareas), [tareas]);
   const bestStreak = useMemo(() => calcBestStreak(tareas), [tareas]);
   const phrase = motivationalPhrase(streak);
 
-  // XP: 1 per completed task + bonus for streaks
-  const xp = totalCompletadas;
+  // XP: 1 per completed task + 0.5 per subtask
+  const xp = totalCompletadas + Math.floor(subStats.doneSubs * 0.5);
   const levelInfo = getLevel(xp);
 
   // 7-day data
@@ -464,6 +480,26 @@ export function StatsView() {
           {trendArrow(trends.minDiff)}
         </div>
       </div>
+
+      {/* Subtasks + Overdue */}
+      {(subStats.totalSubs > 0 || overdue > 0) && (
+        <div className="stats-extra-kpis">
+          {subStats.totalSubs > 0 && (
+            <div className="stats-kpi">
+              <span className="stats-kpi-num">{subStats.doneSubs}/{subStats.totalSubs}</span>
+              <span className="stats-kpi-label">Subtareas completadas</span>
+              <span className="stats-kpi-pct">{subStats.pct}%</span>
+            </div>
+          )}
+          {overdue > 0 && (
+            <div className="stats-kpi stats-kpi-warn">
+              <span className="stats-kpi-num">{overdue}</span>
+              <span className="stats-kpi-label">Tareas vencidas</span>
+              <span className="stats-kpi-fire">⚠️</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Activity Heatmap */}
       <div className="stats-card">

@@ -188,6 +188,50 @@ export function Calendar() {
   const [dragOverSlot, setDragOverSlot] = useState<string | null>(null);
   const [calSidebarOpen, setCalSidebarOpen] = useState(false);
 
+  // Resize state for dragging event bottom edge
+  const resizeRef = useRef<{ taskId: string; startY: number; startMin: number } | null>(null);
+
+  const handleResizeStart = useCallback((e: React.MouseEvent | React.TouchEvent, taskId: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const task = state.tareas.find((t) => t.id === taskId);
+    if (!task || !task.fin) return;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    resizeRef.current = { taskId, startY: clientY, startMin: timeToMin(task.fin) };
+
+    const onMove = (ev: MouseEvent | TouchEvent) => {
+      if (!resizeRef.current) return;
+      const y = 'touches' in ev ? ev.touches[0].clientY : ev.clientY;
+      const dy = y - resizeRef.current.startY;
+      const slotHeight = 60;
+      const deltaMin = Math.round((dy / slotHeight) * 60 / 5) * 5;
+      let newEndMin = resizeRef.current.startMin + deltaMin;
+      newEndMin = Math.max(0, Math.min(24 * 60 - 1, newEndMin));
+      const t2 = state.tareas.find((t) => t.id === resizeRef.current!.taskId);
+      if (t2) {
+        const startMin = timeToMin(t2.inicio);
+        if (newEndMin <= startMin + 5) newEndMin = startMin + 5;
+      }
+      const finH = Math.floor(newEndMin / 60);
+      const finM = newEndMin % 60;
+      const fin = `${String(finH).padStart(2, '0')}:${String(finM).padStart(2, '0')}`;
+      dispatch({ type: 'UPDATE_TASK', id: resizeRef.current.taskId, patch: { fin } });
+    };
+
+    const onUp = () => {
+      resizeRef.current = null;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onUp);
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onUp);
+  }, [state.tareas, dispatch]);
+
   const openQuickAdd = useCallback((fecha: string, hora: number, e: React.MouseEvent) => {
     const rect = sectionRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -454,6 +498,7 @@ export function Calendar() {
                   onSlotClick={openQuickAdd}
                   onEventDragStart={handleDragStart}
                   onToggleTask={handleToggleTask}
+                  onResizeStart={handleResizeStart}
                   dragOverSlot={dragOverSlot}
                   touchOverSlot={touchOverSlot}
                   onDragOver={handleDragOver}
@@ -472,28 +517,31 @@ export function Calendar() {
             <div className={`gcal-sidebar${calSidebarOpen ? ' mobile-open' : ''}`}>
               <div className="gcal-sidebar-title">Tareas pendientes</div>
               <div className="gcal-sidebar-list">
-                {tareasPendientes.map((t) => (
-                  <div
-                    key={t.id}
-                    className="gcal-sidebar-item"
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, t.id)}
-                    onClick={() => abrirDetalle(t.id)}
-                    onTouchStart={(e) => onTouchStart(e, t.id, t.titulo)}
-                    onTouchMove={onTouchMove}
-                    onTouchEnd={onTouchEnd}
-                  >
-                    <div className="gcal-sidebar-grip">⠿</div>
-                    <div className="gcal-sidebar-info">
-                      <span className="gcal-sidebar-name">{t.titulo}</span>
-                      <span className="gcal-sidebar-meta">
-                        {t.inicio ? `${fmtHora(t.inicio, hourFormat)}${t.fin ? ' – ' + fmtHora(t.fin, hourFormat) : ''} · ` : ''}
-                        {t.estPomos} 🍅{t.quadrant !== 'Q2' ? ` · ${t.quadrant}` : ''}
-                        {t.importante ? ' · ★' : ''}
-                      </span>
+                {tareasPendientes.map((t) => {
+                  const isPlanned = !!(t.fecha && t.inicio);
+                  return (
+                    <div
+                      key={t.id}
+                      className={`gcal-sidebar-item${isPlanned ? ' planned' : ''}`}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, t.id)}
+                      onClick={() => abrirDetalle(t.id)}
+                      onTouchStart={(e) => onTouchStart(e, t.id, t.titulo)}
+                      onTouchMove={onTouchMove}
+                      onTouchEnd={onTouchEnd}
+                    >
+                      <div className="gcal-sidebar-grip">{isPlanned ? '📌' : '⠿'}</div>
+                      <div className="gcal-sidebar-info">
+                        <span className="gcal-sidebar-name">{t.titulo}</span>
+                        <span className="gcal-sidebar-meta">
+                          {t.inicio ? `${fmtHora(t.inicio, hourFormat)}${t.fin ? ' – ' + fmtHora(t.fin, hourFormat) : ''} · ` : ''}
+                          {t.estPomos} 🍅{t.quadrant !== 'Q2' ? ` · ${t.quadrant}` : ''}
+                          {t.importante ? ' · ★' : ''}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               <div className="gcal-sidebar-hint">Arrastra una tarea a una hora del calendario</div>
               <div className="gcal-sidebar-hint gcal-sidebar-hint-touch">Mantén presionado y arrastra al calendario</div>
@@ -549,6 +597,7 @@ interface TimeRowProps {
   onSlotClick: (fecha: string, hora: number, e: React.MouseEvent) => void;
   onEventDragStart: (e: React.DragEvent, taskId: string) => void;
   onToggleTask: (id: string) => void;
+  onResizeStart: (e: React.MouseEvent | React.TouchEvent, taskId: string) => void;
   dragOverSlot: string | null;
   touchOverSlot: string | null;
   onDragOver: (e: React.DragEvent, slotKey: string) => void;
@@ -559,7 +608,7 @@ interface TimeRowProps {
   onTouchEnd: () => void;
 }
 
-function TimeRow({ hora, dias, hoy, horaActual, minutoActual, nowMin, hourFormat, eventosDelDia, dayLayouts, onAbrir, onSlotClick, onEventDragStart, onToggleTask, dragOverSlot, touchOverSlot, onDragOver, onDragLeave, onDrop, onTouchStart, onTouchMove, onTouchEnd }: TimeRowProps) {
+function TimeRow({ hora, dias, hoy, horaActual, minutoActual, nowMin, hourFormat, eventosDelDia, dayLayouts, onAbrir, onSlotClick, onEventDragStart, onToggleTask, onResizeStart, dragOverSlot, touchOverSlot, onDragOver, onDragLeave, onDrop, onTouchStart, onTouchMove, onTouchEnd }: TimeRowProps) {
   return (
     <>
       <div className="gcal-time-label">
@@ -650,6 +699,13 @@ function TimeRow({ hora, dias, hoy, horaActual, minutoActual, nowMin, hourFormat
                     {fmtHora(t.inicio, hourFormat)}
                     {t.fin ? ` – ${fmtHora(t.fin, hourFormat)}` : ''}
                   </span>
+                  {t.fin && (
+                    <div
+                      className="gcal-event-resize"
+                      onMouseDown={(e) => onResizeStart(e, t.id)}
+                      onTouchStart={(e) => onResizeStart(e, t.id)}
+                    />
+                  )}
                 </div>
               );
             })}
