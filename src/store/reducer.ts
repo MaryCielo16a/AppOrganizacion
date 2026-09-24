@@ -44,9 +44,11 @@ export type Action =
   | { type: 'DELETE_SUBTASK'; taskId: string; subtaskId: string }
   | { type: 'RENAME_SUBTASK'; taskId: string; subtaskId: string; titulo: string }
   | { type: 'SET_SUBTASK_PROGRESS'; taskId: string; subtaskId: string; enProceso: boolean }
-  | { type: 'ADD_HABIT'; titulo: string; goalId: string }
+  | { type: 'ADD_HABIT'; titulo: string; goalId: string; hora?: string }
   | { type: 'DELETE_HABIT'; id: string }
+  | { type: 'UPDATE_HABIT'; id: string; patch: Partial<Habit> }
   | { type: 'TOGGLE_HABIT_DAY'; habitId: string; dia: string }
+  | { type: 'REORDER_SUBTASK'; taskId: string; dragId: string; refId: string }
   | { type: 'REORDER_TASK'; dragId: string; refId: string; position: 'before' | 'after' }
   | { type: 'RESET_MI_DIA' }
   | { type: 'SEED_EXAMPLES' }
@@ -250,6 +252,23 @@ export function reducer(state: PersistedState, action: Action): PersistedState {
         ),
       };
 
+    case 'REORDER_SUBTASK': {
+      return {
+        ...state,
+        tareas: state.tareas.map((t) => {
+          if (t.id !== action.taskId) return t;
+          const subs = [...t.subtareas];
+          const dragIdx = subs.findIndex((s) => s.id === action.dragId);
+          if (dragIdx === -1) return t;
+          const [dragged] = subs.splice(dragIdx, 1);
+          const refIdx = subs.findIndex((s) => s.id === action.refId);
+          if (refIdx === -1) return t;
+          subs.splice(refIdx, 0, dragged);
+          return { ...t, subtareas: subs };
+        }),
+      };
+    }
+
     case 'ADD_HABIT': {
       const habit: Habit = {
         id: uid(),
@@ -257,12 +276,19 @@ export function reducer(state: PersistedState, action: Action): PersistedState {
         goalId: action.goalId,
         diasCompletados: [],
         creado: new Date().toISOString(),
+        hora: action.hora ?? '',
       };
       return { ...state, habits: [...state.habits, habit] };
     }
 
     case 'DELETE_HABIT':
       return { ...state, habits: state.habits.filter((h) => h.id !== action.id) };
+
+    case 'UPDATE_HABIT':
+      return {
+        ...state,
+        habits: state.habits.map((h) => h.id === action.id ? { ...h, ...action.patch } : h),
+      };
 
     case 'TOGGLE_HABIT_DAY': {
       const habits = state.habits.map((h) => {
@@ -374,6 +400,7 @@ export function hydrate(guardado: PersistedState): PersistedState {
           goalId: h.goalId ?? '',
           diasCompletados: Array.isArray(h.diasCompletados) ? h.diasCompletados : [],
           creado: h.creado ?? new Date().toISOString(),
+          hora: h.hora ?? '',
         }))
       : [],
   };

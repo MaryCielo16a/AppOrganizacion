@@ -1,7 +1,51 @@
 import { useState } from 'react';
 import { useApp } from '../store/AppContext';
-import type { GoalFocus, GoalHorizon } from '../types';
+import type { GoalFocus, GoalHorizon, Habit } from '../types';
 import { HabitsSection } from './HabitsSection';
+
+function getWeekDates(): string[] {
+  const hoy = new Date();
+  const day = hoy.getDay();
+  const lunes = new Date(hoy);
+  lunes.setDate(hoy.getDate() - ((day + 6) % 7));
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(lunes);
+    d.setDate(lunes.getDate() + i);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
+}
+
+function habitStreak(dias: string[]): number {
+  if (dias.length === 0) return 0;
+  const sorted = [...dias].sort().reverse();
+  const hoy = new Date();
+  const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  let count = 0;
+  const check = new Date(hoy);
+  if (sorted[0] !== fmt(hoy)) {
+    check.setDate(check.getDate() - 1);
+    if (sorted[0] !== fmt(check)) return 0;
+  }
+  while (true) {
+    if (dias.includes(fmt(check))) {
+      count++;
+      check.setDate(check.getDate() - 1);
+    } else break;
+  }
+  return count;
+}
+
+function getHabitProgress(habits: Habit[], goalId: string): HabitProgress[] {
+  const week = getWeekDates();
+  return habits
+    .filter((h) => h.goalId === goalId)
+    .map((h) => ({
+      titulo: h.titulo,
+      streak: habitStreak(h.diasCompletados),
+      thisWeekDone: week.filter((d) => h.diasCompletados.includes(d)).length,
+      totalDays: h.diasCompletados.length,
+    }));
+}
 
 const AREA_COLORS = [
   { id: 'purple', hex: '#7c3aed' },
@@ -159,6 +203,7 @@ export function AreasView() {
                         const pct = total > 0 ? Math.round((done / total) * 100) : 0;
                         const fi = FOCUS_LABELS[goal.focus];
                         const hCount = state.habits.filter((h) => h.goalId === goal.id).length;
+                        const hProgress = getHabitProgress(state.habits, goal.id);
                         return (
                           <div key={goal.id} className="goal-card">
                             <div className="goal-card-top">
@@ -177,6 +222,7 @@ export function AreasView() {
                               pct={pct}
                               gTasks={gTasks}
                               habitCount={hCount}
+                              habitProgress={hProgress}
                               quickTaskTarget={quickTaskTarget}
                               setQuickTaskTarget={setQuickTaskTarget}
                               areaId={area.id}
@@ -201,6 +247,7 @@ export function AreasView() {
                       const pct = total > 0 ? Math.round((done / total) * 100) : 0;
                       const fi = FOCUS_LABELS[goal.focus];
                       const hCount = state.habits.filter((h) => h.goalId === goal.id).length;
+                      const hProgress = getHabitProgress(state.habits, goal.id);
                       return (
                         <div key={goal.id} className="goal-card">
                           <div className="goal-card-top">
@@ -219,6 +266,7 @@ export function AreasView() {
                             pct={pct}
                             gTasks={gTasks}
                             habitCount={hCount}
+                            habitProgress={hProgress}
                             quickTaskTarget={quickTaskTarget}
                             setQuickTaskTarget={setQuickTaskTarget}
                             areaId={area.id}
@@ -338,6 +386,13 @@ export function AreasView() {
   );
 }
 
+interface HabitProgress {
+  titulo: string;
+  streak: number;
+  thisWeekDone: number;
+  totalDays: number;
+}
+
 interface GoalMetaProps {
   goalId: string;
   fi: { label: string; icon: string; cls: string };
@@ -348,6 +403,7 @@ interface GoalMetaProps {
   pct: number;
   gTasks: { id: string; titulo: string; hecha: boolean; sesiones: { inicio: string }[]; estPomos: number; inicio: string; fin: string }[];
   habitCount: number;
+  habitProgress: HabitProgress[];
   quickTaskTarget: { areaId: string; goalId: string } | null;
   setQuickTaskTarget: (v: { areaId: string; goalId: string } | null) => void;
   areaId: string;
@@ -358,10 +414,20 @@ interface GoalMetaProps {
 }
 
 function GoalMeta({
-  goalId, fi, toggleFocus, focus, done, total, pct, gTasks, habitCount,
+  goalId, fi, toggleFocus, focus, done, total, pct, gTasks, habitCount, habitProgress,
   quickTaskTarget, setQuickTaskTarget, areaId, quickTaskTitle,
   setQuickTaskTitle, confirmarTareaRapida, onDelete,
 }: GoalMetaProps) {
+  const totalHabitWeek = habitProgress.reduce((s, h) => s + h.thisWeekDone, 0);
+  const maxHabitWeek = habitProgress.length * 7;
+  const habitWeekPct = maxHabitWeek > 0 ? Math.round((totalHabitWeek / maxHabitWeek) * 100) : 0;
+
+  const combinedPct = habitProgress.length > 0 && total > 0
+    ? Math.round((pct * 0.6 + habitWeekPct * 0.4))
+    : habitProgress.length > 0 && total === 0
+      ? habitWeekPct
+      : pct;
+
   return (
     <div className="goal-meta-block">
       <div className="goal-meta-controls">
@@ -386,12 +452,41 @@ function GoalMeta({
       </div>
 
       <div className="goal-progress-row">
-        <span className="goal-progress-text">Progreso: {done}/{total} tareas{habitCount > 0 ? ` · ${habitCount} hábito${habitCount > 1 ? 's' : ''}` : ''}</span>
-        <span className="goal-progress-pct">{pct}%</span>
+        <span className="goal-progress-text">
+          Progreso: {done}/{total} tareas
+          {habitCount > 0 && ` · ${habitCount} hábito${habitCount > 1 ? 's' : ''}`}
+        </span>
+        <span className="goal-progress-pct">{combinedPct}%</span>
       </div>
       <div className="goal-progress-bar">
-        <div className="goal-progress-fill" style={{ width: `${pct}%` }} />
+        <div className="goal-progress-fill" style={{ width: `${combinedPct}%` }} />
       </div>
+
+      {habitProgress.length > 0 && (
+        <div className="goal-habits-progress">
+          {habitProgress.map((hp) => (
+            <div key={hp.titulo} className="goal-habit-row">
+              <span className="goal-habit-icon">🔄</span>
+              <span className="goal-habit-name">{hp.titulo}</span>
+              {hp.streak > 0 && (
+                <span className="goal-habit-streak">🔥 {hp.streak}d</span>
+              )}
+              <span className="goal-habit-week">{hp.thisWeekDone}/7 esta semana</span>
+              <div className="goal-habit-bar-bg">
+                <div
+                  className="goal-habit-bar-fill"
+                  style={{ width: `${(hp.thisWeekDone / 7) * 100}%` }}
+                />
+              </div>
+            </div>
+          ))}
+          {total > 0 && (
+            <div className="goal-habit-note">
+              Progreso combinado: tareas ({pct}%) + hábitos ({habitWeekPct}%)
+            </div>
+          )}
+        </div>
+      )}
 
       {gTasks.length > 0 && (
         <div className="goal-task-list">

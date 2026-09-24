@@ -49,6 +49,8 @@ export interface Habit {
   /** Días completados como ISO 'YYYY-MM-DD'. */
   diasCompletados: string[];
   creado: string;
+  /** Hora recordatorio 'HH:MM'. Vacío si no tiene. */
+  hora: string;
 }
 
 /** Una tarea del organizador. */
@@ -147,6 +149,7 @@ export type BuiltinView =
   | 'eisenhower'
   | 'areas'
   | 'rutina'
+  | 'habitos'
   | 'asistente'
   | 'estadisticas';
 

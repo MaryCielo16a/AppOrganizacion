@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { esEventoCalendario, useApp } from '../store/AppContext';
 import type { Task } from '../types';
 
 export function TaskDetail() {
   const { state, dispatch, detalleId, cerrarDetalle, irA, showToast } = useApp();
   const [newSub, setNewSub] = useState('');
+  const [dragSubId, setDragSubId] = useState('');
+  const [dragOverSubId, setDragOverSubId] = useState('');
+  const dragSubRef = useRef<string>('');
 
   const tarea = state.tareas.find((t) => t.id === detalleId) ?? null;
   if (!tarea) return null;
@@ -93,7 +96,42 @@ export function TaskDetail() {
 
           <ul className="sub-list">
             {tarea.subtareas.map((s) => (
-              <li key={s.id} className={`sub-item${s.hecha ? ' done' : ''}${s.enProceso ? ' in-progress' : ''}`}>
+              <li
+                key={s.id}
+                className={`sub-item${s.hecha ? ' done' : ''}${s.enProceso ? ' in-progress' : ''}${dragOverSubId === s.id ? ' drag-over' : ''}`}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.effectAllowed = 'move';
+                  dragSubRef.current = s.id;
+                  setDragSubId(s.id);
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  if (dragSubRef.current && dragSubRef.current !== s.id) {
+                    setDragOverSubId(s.id);
+                  }
+                }}
+                onDragLeave={() => {
+                  if (dragOverSubId === s.id) setDragOverSubId('');
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (dragSubRef.current && dragSubRef.current !== s.id) {
+                    dispatch({ type: 'REORDER_SUBTASK', taskId: tarea.id, dragId: dragSubRef.current, refId: s.id });
+                  }
+                  setDragOverSubId('');
+                  setDragSubId('');
+                  dragSubRef.current = '';
+                }}
+                onDragEnd={() => {
+                  setDragOverSubId('');
+                  setDragSubId('');
+                  dragSubRef.current = '';
+                }}
+                style={{ opacity: dragSubId === s.id ? 0.4 : 1 }}
+              >
+                <span className="sub-drag-handle" title="Arrastrar para reordenar">⠿</span>
                 <input
                   type="checkbox"
                   checked={s.hecha}
