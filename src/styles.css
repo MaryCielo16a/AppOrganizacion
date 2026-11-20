@@ -728,12 +728,146 @@ body.light .pomo-ring-bg{stroke:rgba(0,0,0,.08)}
 .modal-actions .ghost-btn{color:#666;border-color:#ddd}
 
 /* ===== TOAST ===== */
+.toast.hidden{display:none}
+
+/* ===== GAMIFICATION ===== */
+
+/* Check bounce animation */
+@keyframes checkBounce{
+  0%{transform:scale(1)}
+  30%{transform:scale(1.4)}
+  50%{transform:scale(0.9)}
+  70%{transform:scale(1.15)}
+  100%{transform:scale(1)}
+}
+.check-bounce{animation:checkBounce .5s ease}
+
+/* Task completion slide */
+@keyframes taskComplete{
+  0%{opacity:1;transform:translateX(0)}
+  50%{opacity:.7;transform:translateX(8px)}
+  100%{opacity:1;transform:translateX(0)}
+}
+.task-item.done{animation:taskComplete .4s ease}
+
+/* XP popup */
+@keyframes xpFloat{
+  0%{opacity:1;transform:translate(-50%,0) scale(1)}
+  50%{opacity:1;transform:translate(-50%,-30px) scale(1.2)}
+  100%{opacity:0;transform:translate(-50%,-60px) scale(0.8)}
+}
+.xp-popup{
+  position:fixed;z-index:9998;pointer-events:none;
+  font-size:18px;font-weight:800;color:var(--accent);
+  text-shadow:0 0 10px rgba(186,78,120,.5),0 2px 4px rgba(0,0,0,.3);
+  animation:xpFloat 1.2s ease forwards;
+}
+
+/* Level up overlay */
+@keyframes levelUpIn{
+  0%{opacity:0;transform:scale(0.5)}
+  50%{transform:scale(1.08)}
+  100%{opacity:1;transform:scale(1)}
+}
+@keyframes levelUpPulse{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.1)}
+}
+.levelup-overlay{
+  position:fixed;inset:0;z-index:9997;
+  background:rgba(0,0,0,.7);backdrop-filter:blur(6px);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+}
+.levelup-card{
+  text-align:center;padding:40px 60px;border-radius:20px;
+  background:linear-gradient(135deg,var(--panel) 0%,var(--bg) 100%);
+  border:2px solid var(--accent);
+  box-shadow:0 0 60px rgba(186,78,120,.3),0 0 120px rgba(186,78,120,.15);
+  animation:levelUpIn .6s ease;
+}
+.levelup-icon{
+  font-size:64px;display:block;margin-bottom:12px;
+  animation:levelUpPulse 1s ease infinite;
+}
+.levelup-title{
+  font-size:32px;font-weight:800;
+  background:linear-gradient(135deg,var(--accent),#ffd700);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  margin-bottom:4px;
+}
+.levelup-name{
+  font-size:22px;font-weight:600;color:var(--text);margin-bottom:8px;
+}
+.levelup-sub{
+  font-size:14px;color:var(--text-dim);
+}
+
+/* Daily Progress widget in sidebar */
+.daily-progress{
+  margin:0 14px 10px;padding:12px;border-radius:10px;
+  background:var(--panel);border:1px solid var(--line);
+}
+.dp-level{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.dp-level-icon{font-size:22px}
+.dp-level-info{flex:1;min-width:0}
+.dp-level-bar{
+  height:5px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:3px;
+}
+.dp-level-fill{
+  height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-soft));
+  border-radius:3px;transition:width .5s ease;
+}
+.dp-level-text{font-size:10.5px;color:var(--text-dim)}
+.dp-stats{
+  display:flex;gap:12px;margin-bottom:8px;
+}
+.dp-streak,.dp-today{
+  font-size:13px;font-weight:600;
+}
+.dp-streak{color:#ff6b35}
+.dp-today{color:var(--accent)}
+.dp-challenges{
+  border-top:1px solid var(--line);padding-top:8px;
+}
+.dp-ch-header{
+  font-size:10px;text-transform:uppercase;letter-spacing:.5px;
+  color:var(--text-dim);margin-bottom:6px;font-weight:600;
+}
+.dp-ch{
+  display:flex;align-items:center;gap:8px;padding:3px 0;
+  font-size:12px;color:var(--text-dim);
+  transition:color .2s;
+}
+.dp-ch.done{color:var(--accent)}
+.dp-ch.done .dp-ch-icon{
+  color:var(--accent);font-weight:700;
+}
+.dp-ch.done .dp-ch-text{text-decoration:line-through;opacity:.7}
+.dp-ch-icon{width:18px;text-align:center;font-size:12px}
+
+/* Smooth view transitions */
+#main{
+  animation:viewFadeIn .25s ease;
+}
+@keyframes viewFadeIn{
+  0%{opacity:0;transform:translateY(6px)}
+  100%{opacity:1;transform:translateY(0)}
+}
+
+/* Enhanced toast */
 .toast{
   position:fixed;bottom:26px;left:50%;transform:translateX(-50%);
-  background:#222;color:#fff;padding:10px 18px;border-radius:6px;font-size:13px;z-index:80;
-  box-shadow:0 6px 20px rgba(0,0,0,.35);
+  background:var(--panel);color:var(--text);padding:12px 20px;border-radius:10px;
+  font-size:13px;z-index:80;border:1px solid var(--line);
+  box-shadow:0 8px 30px rgba(0,0,0,.4);
+  animation:toastIn .3s ease;
 }
-.toast.hidden{display:none}
+@keyframes toastIn{
+  0%{opacity:0;transform:translateX(-50%) translateY(20px)}
+  100%{opacity:1;transform:translateX(-50%) translateY(0)}
+}
 
 /* ===== LOCK SCREEN ===== */
 .lock-backdrop{

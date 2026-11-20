@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useApp } from '../store/AppContext';
 import type { Task } from '../types';
 import { DIAS_C, fmtHora, hoyISO, isoADate } from '../utils/date';
@@ -13,6 +14,7 @@ interface Props {
 export function TaskItem({ tarea, onDragStart, onDragOver, onDrop, isDragOver }: Props) {
   const { state, dispatch, abrirDetalle, irA, showToast, nombreLista } = useApp();
   const { hourFormat } = state.ajustes;
+  const [justCompleted, setJustCompleted] = useState(false);
 
   const completados = tarea.sesiones.length;
 
@@ -71,10 +73,16 @@ export function TaskItem({ tarea, onDragStart, onDragOver, onDrop, isDragOver }:
 
       <button
         type="button"
-        className="check"
+        className={`check${justCompleted ? ' check-bounce' : ''}`}
         title="Completar"
         aria-label={tarea.hecha ? 'Marcar como pendiente' : 'Marcar como completada'}
-        onClick={() => dispatch({ type: 'TOGGLE_TASK', id: tarea.id })}
+        onClick={() => {
+          if (!tarea.hecha) {
+            setJustCompleted(true);
+            setTimeout(() => setJustCompleted(false), 600);
+          }
+          dispatch({ type: 'TOGGLE_TASK', id: tarea.id });
+        }}
       >
         ✓
       </button>
