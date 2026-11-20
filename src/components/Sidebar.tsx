@@ -3,6 +3,7 @@ import { useApp } from '../store/AppContext';
 import { useAuth } from '../store/AuthContext';
 import { hoyISO } from '../utils/date';
 import type { ViewId } from '../types';
+import { DailyProgress } from './Gamification';
 
 interface NavDef {
   view: ViewId;
@@ -91,6 +92,8 @@ export function Sidebar() {
           <div className="user-mail">{user?.email ?? ''}</div>
         </div>
       </div>
+
+      <DailyProgress />
 
       <div className="search-box">
         <span className="ico">🔍</span>

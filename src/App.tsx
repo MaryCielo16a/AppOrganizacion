@@ -20,6 +20,7 @@ import { FocusOverlay } from './components/FocusOverlay';
 import { StatsView } from './components/StatsView';
 import { HabitsView } from './components/HabitsView';
 import { NotificationBanner } from './components/NotificationBanner';
+import { Gamification } from './components/Gamification';
 import { mmss } from './utils/date';
 
 export function App() {
@@ -171,6 +172,7 @@ export function App() {
       )}
       <FocusOverlay />
       <Toast />
+      <Gamification />
     </>
   );
 }
